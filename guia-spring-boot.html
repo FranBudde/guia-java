@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Plano de Spring Boot — Guía de arquitectura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /*
+    Paleta: cianotipo invertido — plano técnico sobre papel vegetal, no neón sobre negro.
+    El bloque de código queda siempre oscuro a propósito: es el "recorte de cianotipo"
+    incrustado en la página, sin importar el tema activo.
+  */
+  :root{
+    --ink:#182635;
+    --ink-soft:#3E5064;
+    --paper:#EAEEF0;
+    --paper-raised:#F6F8F8;
+    --panel:#FFFFFF;
+    --blue:#2E6E9E;
+    --blue-deep:#1C4A6E;
+    --blue-faint:rgba(46,110,158,0.10);
+    --copper:#A85A22;
+    --copper-faint:rgba(168,90,34,0.10);
+    --green:#3D7A57;
+    --green-faint:rgba(61,122,87,0.10);
+    --red-flag:#A6432E;
+    --red-flag-faint:rgba(166,67,46,0.10);
+    --slate:#5B6B78;
+    --line:rgba(24,38,53,0.16);
+
+    --code-bg:#101922;
+    --code-line:rgba(207,232,245,0.10);
+    --code-text:#CFE8F5;
+
+    --radius:3px;
+    --display:'Big Shoulders Display',sans-serif;
+    --body:'IBM Plex Sans',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#E7ECEF;
+      --ink-soft:#B7C4CE;
+      --paper:#0F161D;
+      --paper-raised:#151E26;
+      --panel:#131B23;
+      --blue:#6FB0DE;
+      --blue-deep:#8FC4E8;
+      --blue-faint:rgba(111,176,222,0.10);
+      --copper:#E08A4B;
+      --copper-faint:rgba(224,138,75,0.10);
+      --green:#6FCB94;
+      --green-faint:rgba(111,203,148,0.10);
+      --red-flag:#E38468;
+      --red-flag-faint:rgba(227,132,104,0.10);
+      --slate:#8CA0AC;
+      --line:rgba(231,236,239,0.14);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#E7ECEF;
+    --ink-soft:#B7C4CE;
+    --paper:#0F161D;
+    --paper-raised:#151E26;
+    --panel:#131B23;
+    --blue:#6FB0DE;
+    --blue-deep:#8FC4E8;
+    --blue-faint:rgba(111,176,222,0.10);
+    --copper:#E08A4B;
+    --copper-faint:rgba(224,138,75,0.10);
+    --green:#6FCB94;
+    --green-faint:rgba(111,203,148,0.10);
+    --red-flag:#E38468;
+    --red-flag-faint:rgba(227,132,104,0.10);
+    --slate:#8CA0AC;
+    --line:rgba(231,236,239,0.14);
+  }
+  :root[data-theme="light"]{
+    --ink:#182635;
+    --ink-soft:#3E5064;
+    --paper:#EAEEF0;
+    --paper-raised:#F6F8F8;
+    --panel:#FFFFFF;
+    --blue:#2E6E9E;
+    --blue-deep:#1C4A6E;
+    --blue-faint:rgba(46,110,158,0.10);
+    --copper:#A85A22;
+    --copper-faint:rgba(168,90,34,0.10);
+    --green:#3D7A57;
+    --green-faint:rgba(61,122,87,0.10);
+    --red-flag:#A6432E;
+    --red-flag-faint:rgba(166,67,46,0.10);
+    --slate:#5B6B78;
+    --line:rgba(24,38,53,0.16);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--body);
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    transition:background .2s ease, color .2s ease;
+  }
+  ::selection{background:var(--copper);color:var(--panel);}
+  a{color:var(--blue);}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{transition:none !important;}
+  }
+
+  h1,h2,h3,h4{font-family:var(--display);font-weight:700;margin:0;letter-spacing:0.002em;text-wrap:balance;}
+  p{margin:0 0 14px 0;max-width:64ch;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--copper);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--copper);}
+
+  /* ===== layout shell ===== */
+  .shell{display:flex;max-width:1240px;margin:0 auto;}
+  .nav{
+    width:240px;
+    flex-shrink:0;
+    position:sticky;
+    top:0;
+    height:100vh;
+    padding:36px 16px 24px 28px;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+  .nav-title{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:var(--slate);
+    text-transform:uppercase;
+    margin-bottom:16px;
+  }
+  .nav ol{list-style:none;margin:0;padding:0;counter-reset:sheet;}
+  .nav li{counter-increment:sheet;}
+  .nav a{
+    display:flex;
+    gap:10px;
+    text-decoration:none;
+    color:var(--ink-soft);
+    font-size:13.5px;
+    padding:6px 8px;
+    border-radius:var(--radius);
+    transition:background .15s, color .15s;
+    line-height:1.3;
+  }
+  .nav a:hover{background:var(--blue-faint);color:var(--ink);}
+  .nav a.active{color:var(--ink);background:var(--blue-faint);font-weight:600;}
+  .nav a::before{
+    content:counter(sheet,decimal-leading-zero);
+    font-family:var(--mono);
+    color:var(--blue);
+    font-size:12px;
+    flex-shrink:0;
+  }
+  .nav-foot{
+    margin-top:auto;
+    padding-top:16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--slate);
+  }
+  .theme-toggle{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+    font-family:var(--mono);
+    font-size:11px;
+    padding:6px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    transition:border-color .15s, color .15s;
+  }
+  .theme-toggle:hover{border-color:var(--blue);color:var(--blue);}
+  .theme-toggle:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+
+  .main{flex:1;min-width:0;padding:0 0 60px 0;border-left:1px solid var(--line);}
+
+  .navtoggle{display:none;}
+
+  /* ===== sheet (section) ===== */
+  .sheet{
+    position:relative;
+    padding:64px 56px 48px 56px;
+  }
+  .sheet + .sheet{border-top:1px solid var(--line);}
+  .sheet:first-of-type{padding-top:0;border-top:none;}
+  .titleblock{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--slate);
+    line-height:1.6;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding-bottom:10px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--line);
+  }
+  .titleblock b{color:var(--blue);font-weight:600;letter-spacing:0.03em;}
+
+  .sheet h2{font-size:32px;max-width:20ch;margin-bottom:16px;color:var(--ink);}
+  .sheet .lede{font-size:16.5px;color:var(--ink-soft);max-width:62ch;margin-bottom:30px;}
+  .content{max-width:680px;}
+  .content h3{font-size:18px;color:var(--blue-deep);margin:32px 0 12px 0;font-family:var(--body);font-weight:600;}
+  .content ul,.content ol{padding-left:20px;max-width:64ch;}
+  .content li{margin-bottom:8px;}
+
+  /* ===== hero ===== */
+  .hero{padding:90px 56px 56px 56px;}
+  .hero h1{font-size:52px;line-height:1.05;max-width:16ch;color:var(--ink);}
+  .hero h1 span{color:var(--blue);}
+  .hero .lede{font-size:18px;color:var(--ink-soft);max-width:58ch;margin:22px 0 28px 0;}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:10px;}
+  .tag{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--blue-deep);
+    border:1px solid var(--line);
+    padding:6px 12px;
+    border-radius:20px;
+  }
+
+  /* ===== callouts ===== */
+  .callout{
+    border-left:3px solid var(--copper);
+    background:var(--copper-faint);
+    padding:16px 20px;
+    border-radius:0 var(--radius) var(--radius) 0;
+    margin:24px 0;
+    font-size:14.5px;
+    max-width:64ch;
+  }
+  .callout p:last-child{margin-bottom:0;}
+  .callout b{color:var(--copper);font-family:var(--mono);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;display:block;margin-bottom:6px;}
+  .callout.green{border-color:var(--green);background:var(--green-faint);}
+  .callout.green b{color:var(--green);}
+  .callout.red{border-color:var(--red-flag);background:var(--red-flag-faint);}
+  .callout.red b{color:var(--red-flag);}
+
+  /* ===== code — el "recorte de cianotipo": siempre oscuro, en cualquier tema ===== */
+  pre{
+    background:var(--code-bg);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    overflow-x:auto;
+    margin:16px 0;
+    position:relative;
+    max-width:100%;
+  }
+  code{font-family:var(--mono);font-size:13px;line-height:1.6;}
+  .cm{color:#6E8CA6;} /* comment */
+  .kw{color:#E0A24B;} /* keyword */
+  .an{color:#6FCF97;} /* annotation */
+  .st{color:#E8C07D;} /* string */
+  .tp{color:#8FD3F4;} /* type */
+
+  /* código suelto (fuera de un bloque pre): badge sutil, en cualquier contexto */
+  code{
+    background:var(--blue-faint);
+    color:var(--blue-deep);
+    padding:1px 5px;
+    border-radius:3px;
+    font-size:0.9em;
+  }
+  /* dentro de un bloque pre, code vuelve al panel oscuro fijo ("cianotipo") */
+  pre code{
+    background:none;
+    color:var(--code-text);
+    padding:0;
+    font-size:13px;
+    border-radius:0;
+  }
+
+  /* ===== tooltips de código: pasar el mouse sobre una palabra la explica ===== */
+  .tok{
+    border-bottom:1px dotted currentColor;
+    cursor:help;
+  }
+  .tok:focus-visible{outline:2px solid var(--blue-deep);outline-offset:2px;border-radius:2px;}
+  .code-tooltip{
+    position:fixed;
+    z-index:50;
+    max-width:300px;
+    background:var(--panel);
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 13px;
+    font-family:var(--body);
+    font-size:12.5px;
+    line-height:1.5;
+    box-shadow:0 10px 28px rgba(0,0,0,0.32);
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(4px);
+    transition:opacity .12s ease, transform .12s ease;
+    pointer-events:none;
+  }
+  .code-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0);}
+
+  /* ===== tables ===== */
+  .tablewrap{overflow-x:auto;margin:18px 0;}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:0;}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--slate);font-weight:500;border-bottom:1px solid var(--ink-soft);}
+  td.k{color:var(--copper);font-family:var(--mono);font-size:13px;white-space:nowrap;font-weight:500;}
+
+  /* ===== diagram wrap ===== */
+  .diagram{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin:24px 0;
+    background:var(--paper-raised);
+    overflow-x:auto;
+  }
+  .diagram svg{display:block;width:100%;height:auto;min-width:480px;}
+  .dg-box{fill:none;stroke:var(--line);}
+  .dg-box-accent{fill:none;stroke:var(--blue);stroke-width:1.5;}
+  .dg-box-copper{fill:none;stroke:var(--copper);}
+  .dg-fill{fill:var(--blue-faint);stroke:var(--blue);}
+  .dg-text{fill:var(--ink);font-family:'IBM Plex Mono',monospace;}
+  .dg-text-muted{fill:var(--slate);font-family:'IBM Plex Mono',monospace;}
+  .dg-dot{fill:var(--copper);}
+  .dg-line{stroke:var(--blue);}
+
+  /* ===== accordion ===== */
+  .qgroup-label{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--copper);
+    margin:34px 0 12px 0;
+  }
+  .qa{border-bottom:1px solid var(--line);}
+  .qa button{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    color:var(--ink);
+    font-family:var(--body);
+    font-weight:600;
+    font-size:14.5px;
+    padding:16px 36px 16px 0;
+    cursor:pointer;
+    position:relative;
+  }
+  .qa button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;}
+  .qa button::after{
+    content:"+";
+    position:absolute;
+    right:4px;
+    top:50%;
+    transform:translateY(-50%);
+    color:var(--blue);
+    font-size:18px;
+    font-family:var(--mono);
+    transition:transform .2s;
+  }
+  .qa.open button::after{transform:translateY(-50%) rotate(45deg);}
+  .qa .a{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .25s ease;
+    font-size:14px;
+    color:var(--ink-soft);
+  }
+  .qa .a-inner{padding:0 0 18px 0;max-width:62ch;}
+  .qa.open .a{max-height:400px;}
+
+  /* ===== prompt box ===== */
+  .promptbox{
+    background:var(--code-bg);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    margin:20px 0;
+    position:relative;
+  }
+  .promptbox pre{padding:0;margin:0;white-space:pre-wrap;}
+  .promptbox code{color:var(--code-text);font-size:13.5px;}
+  .copybtn{
+    position:absolute;
+    top:16px;
+    right:16px;
+    background:var(--blue);
+    color:#0B1620;
+    border:none;
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:8px 14px;
+    border-radius:20px;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .copybtn:hover{background:#8FCBEA;}
+  .copybtn.done{background:#6FCF97;}
+
+  /* ===== compare pills ===== */
+  .stamp{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:11px;
+    padding:2px 8px;
+    border-radius:10px;
+    letter-spacing:0.03em;
+  }
+  .stamp.high{background:var(--green-faint);color:var(--green);}
+  .stamp.mid{background:var(--copper-faint);color:var(--copper);}
+  .stamp.low{background:var(--red-flag-faint);color:var(--red-flag);}
+
+  footer{
+    padding:40px 56px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--slate);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    border-top:1px solid var(--line);
+  }
+
+  @media (max-width: 900px){
+    .nav{display:none;}
+    .navtoggle{
+      display:flex;
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:var(--paper);
+      border-bottom:1px solid var(--line);
+      padding:14px 20px;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-family:var(--mono);
+      font-size:12px;
+      color:var(--blue);
+    }
+    .navtoggle-controls{display:flex;align-items:center;gap:8px;flex:1;min-width:0;margin-left:12px;}
+    .navtoggle select{
+      background:var(--panel);
+      color:var(--ink);
+      border:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:var(--radius);
+      width:100%;
+      min-width:0;
+    }
+    .main{border-left:none;}
+    .sheet{padding:44px 22px 36px 22px;}
+    .hero{padding:48px 22px 36px 22px;}
+    .hero h1{font-size:34px;}
+    footer{padding:32px 22px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="navtoggle">
+  <span>ÍNDICE DE PLANOS</span>
+  <div class="navtoggle-controls">
+  <button class="theme-toggle" id="themeToggleMobile" type="button" aria-label="Cambiar tema claro/oscuro"><span id="themeIconMobile">☾</span></button>
+  <select onchange="location.href=this.value">
+    <option value="#hero">00 · Portada</option>
+    <option value="#por-que-java">01 · Por qué Java</option>
+    <option value="#jvm">02 · La JVM en criollo</option>
+    <option value="#spring-boot">03 · Qué es Spring Boot</option>
+    <option value="#ioc-di">04 · Inyección de dependencias</option>
+    <option value="#anatomia">05 · Anatomía de una app</option>
+    <option value="#hilos">06 · Hilos y concurrencia</option>
+    <option value="#concurrencia-moderna">07 · Virtual Threads vs Reactive</option>
+    <option value="#persistencia">08 · JPA, JDBC y transacciones</option>
+    <option value="#errores">09 · Errores y validación</option>
+    <option value="#testing">10 · Testing con criterio</option>
+    <option value="#arquitectura">11 · Monolito vs microservicios</option>
+    <option value="#seguridad">12 · Autenticación y autorización</option>
+    <option value="#observabilidad">13 · Logs, métricas y Actuator</option>
+    <option value="#aop">14 · Ciclo de vida y AOP</option>
+    <option value="#fundamentos-java">15 · Fundamentos de Java que se oxidan</option>
+    <option value="#paginacion">16 · Paginación y versionado</option>
+    <option value="#mensajeria">17 · Kafka vs RabbitMQ</option>
+    <option value="#resiliencia">18 · Circuit Breaker y Retry</option>
+    <option value="#docker">19 · Docker y despliegue</option>
+    <option value="#versiones">20 · Qué versión te vas a encontrar</option>
+    <option value="#dia-a-dia">21 · Tu día a día</option>
+    <option value="#entrevista">22 · Preguntas de entrevista</option>
+    <option value="#prompt">23 · Prompt para Claude Code</option>
+  </select>
+  </div>
+</div>
+
+<div class="shell">
+  <nav class="nav">
+    <div class="nav-title">Índice de planos</div>
+    <ol>
+      <li><a href="#hero">Portada</a></li>
+      <li><a href="#por-que-java">Por qué Java</a></li>
+      <li><a href="#jvm">La JVM en criollo</a></li>
+      <li><a href="#spring-boot">Qué es Spring Boot</a></li>
+      <li><a href="#ioc-di">Inyección de dependencias</a></li>
+      <li><a href="#anatomia">Anatomía de una app</a></li>
+      <li><a href="#hilos">Hilos y concurrencia</a></li>
+      <li><a href="#concurrencia-moderna">Virtual Threads vs Reactive</a></li>
+      <li><a href="#persistencia">JPA, JDBC y transacciones</a></li>
+      <li><a href="#errores">Errores y validación</a></li>
+      <li><a href="#testing">Testing con criterio</a></li>
+      <li><a href="#arquitectura">Monolito vs microservicios</a></li>
+      <li><a href="#seguridad">Autenticación y autorización</a></li>
+      <li><a href="#observabilidad">Logs, métricas y Actuator</a></li>
+      <li><a href="#aop">Ciclo de vida y AOP</a></li>
+      <li><a href="#fundamentos-java">Fundamentos de Java que se oxidan</a></li>
+      <li><a href="#paginacion">Paginación y versionado</a></li>
+      <li><a href="#mensajeria">Kafka vs RabbitMQ</a></li>
+      <li><a href="#resiliencia">Circuit Breaker y Retry</a></li>
+      <li><a href="#docker">Docker y despliegue</a></li>
+      <li><a href="#versiones">Qué versión te vas a encontrar</a></li>
+      <li><a href="#dia-a-dia">Tu día a día</a></li>
+      <li><a href="#entrevista">Preguntas de entrevista</a></li>
+      <li><a href="#prompt">Prompt para Claude Code</a></li>
+    </ol>
+    <div class="nav-foot">
+      <span>Escala 1:1<br>Lectura ~105 min</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar tema claro/oscuro"><span id="themeIcon">☾</span> tema</button>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="sheet hero" id="hero">
+      <div class="eyebrow">Plano N° 000 — Fundamentos</div>
+      <h1>Vos ya sabés programar.<br>Te falta <span>el plano</span> de Spring Boot.</h1>
+      <p class="lede">Ya manejás objetos, variables y funciones. Lo que falta es entender el edificio completo: por qué Java, cómo la JVM mueve hilos por debajo, qué hace realmente Spring Boot cuando lo corrés, y qué te van a preguntar de todo esto en una entrevista. Esta guía va de abajo hacia arriba, con ejemplos que después vas a reconocer en tu trabajo del día a día.</p>
+      <div class="hero-tags">
+        <span class="tag">JVM &amp; concurrencia</span>
+        <span class="tag">Spring Boot desde cero</span>
+        <span class="tag">Inyección de dependencias</span>
+        <span class="tag">Preguntas de entrevista</span>
+        <span class="tag">Prompt para Claude Code</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--slate);margin-top:22px;">Tip: en los bloques de código, las palabras con <span class="tok" data-tip="Así se ve un tooltip: una explicación corta al pasar el mouse o tocar en el celular.">subrayado punteado</span> son interactivas — pasá el mouse (o tocá en el celular) para ver qué significan.</p>
+    </section>
+
+    <!-- 01 POR QUÉ JAVA -->
+    <section class="sheet" id="por-que-java">
+      <div class="titleblock"><b>Plano N° 001</b>Fundamentos<br>Escala 1:1</div>
+      <div class="eyebrow">01 · El lenguaje</div>
+      <h2>¿Por qué se elige Java para un proyecto?</h2>
+      <p class="lede">No es que Java sea "el mejor" lenguaje en abstracto. Es que resuelve un problema muy específico mejor que casi ningún otro: sistemas grandes, con muchos años de vida, mucha gente tocando el mismo código, y muchos usuarios usándolo al mismo tiempo.</p>
+
+      <div class="content">
+        <h3>Las cuatro razones que realmente importan</h3>
+        <ul>
+          <li><b>Tipado fuerte y estático:</b> el compilador te frena antes de que el error llegue a producción. Si una función espera un <code>int</code> y le pasás un texto, el proyecto ni siquiera compila. En un equipo de 40 personas, eso evita una cantidad enorme de bugs tontos.</li>
+          <li><b>La JVM y "escribí una vez, corré en cualquier lado":</b> tu código compilado corre igual en Windows, Linux o Mac sin cambiar una línea. Para una empresa que despliega en servidores propios, en la nube, y en distintos entornos, eso es oro.</li>
+          <li><b>Concurrencia nativa y madura:</b> el manejo de hilos está en el lenguaje desde su primera versión (1996), no es una librería que alguien agregó después. Vas a ver por qué esto importa tanto en la sección 06.</li>
+          <li><b>Ecosistema y estabilidad a largo plazo:</b> bancos, seguros, sistemas de gobierno, e-commerce a gran escala — todos corren en Java porque el lenguaje mantiene compatibilidad hacia atrás. Un código de hace 15 años probablemente sigue compilando.</li>
+        </ul>
+
+        <h3>Java contra el resto</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Lenguaje</th><th>Tipado</th><th>Concurrencia nativa</th><th>Dónde brilla</th></tr>
+          <tr>
+            <td class="k">Java</td>
+            <td>Estático <span class="stamp high">fuerte</span></td>
+            <td><span class="stamp high">Madura, con hilos reales</span></td>
+            <td>Sistemas empresariales grandes y de larga vida</td>
+          </tr>
+          <tr>
+            <td class="k">Python</td>
+            <td>Dinámico <span class="stamp mid">flexible</span></td>
+            <td><span class="stamp low">Limitada por el GIL*</span></td>
+            <td>Data science, scripts, prototipos rápidos</td>
+          </tr>
+          <tr>
+            <td class="k">JavaScript / Node</td>
+            <td>Dinámico <span class="stamp mid">flexible</span></td>
+            <td><span class="stamp mid">Un solo hilo + event loop</span></td>
+            <td>Front-end y APIs livianas, mucho I/O</td>
+          </tr>
+          <tr>
+            <td class="k">Go</td>
+            <td>Estático <span class="stamp high">fuerte</span></td>
+            <td><span class="stamp high">Muy liviana (goroutines)</span></td>
+            <td>Microservicios, herramientas de infraestructura</td>
+          </tr>
+          <tr>
+            <td class="k">C#</td>
+            <td>Estático <span class="stamp high">fuerte</span></td>
+            <td><span class="stamp high">Madura</span></td>
+            <td>Ecosistema Microsoft, gaming, empresas</td>
+          </tr>
+        </table></div>
+        <p style="font-size:12.5px;color:var(--slate);">*El GIL (Global Interpreter Lock) hace que Python solo pueda ejecutar código de un hilo a la vez dentro de un mismo proceso, aunque tengas varios núcleos. Java no tiene esa limitación.</p>
+
+        <div class="callout">
+          <b>Para la entrevista</b>
+          Si te preguntan "¿por qué Java para este proyecto?", la respuesta sólida no es "porque es rápido". Es: <i>tipado fuerte que reduce errores en producción, JVM madura con años de optimización, manejo de concurrencia de primer nivel, y un ecosistema (Spring, librerías, herramientas) pensado para sistemas grandes y de largo plazo.</i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 JVM -->
+    <section class="sheet" id="jvm">
+      <div class="titleblock"><b>Plano N° 002</b>Motor de ejecución<br>Escala 1:1</div>
+      <div class="eyebrow">02 · Por debajo del capot</div>
+      <h2>La JVM, explicada en criollo</h2>
+      <p class="lede">Todo lo que hace que Java sea confiable pasa por acá. No necesitás ser experto, pero sí entender estas tres piezas porque van a aparecer todo el tiempo, en logs, en entrevistas, y en bugs raros de producción.</p>
+
+      <div class="content">
+        <h3>1. Tu código no corre directo — pasa por bytecode</h3>
+        <p>Cuando compilás un <code>.java</code>, no se genera código nativo de Windows o Linux. Se genera <b>bytecode</b> (archivos <code>.class</code>), un formato intermedio. La JVM (Java Virtual Machine) es la que después interpreta o compila ese bytecode al código nativo de la máquina donde estás parado. Por eso el mismo <code>.jar</code> corre igual en tu notebook Mac y en un servidor Linux: cada uno tiene su propia JVM que traduce.</p>
+
+        <h3>2. El JIT: compila justo lo que se usa mucho</h3>
+        <p>Al principio la JVM interpreta el bytecode línea por línea (lento). Pero si detecta que un método se ejecuta miles de veces, el <b>JIT (Just-In-Time compiler)</b> lo compila a código nativo optimizado para que corra mucho más rápido de ahí en adelante. Es la razón por la que una app Java "arranca lenta pero después vuela".</p>
+
+        <h3>3. El Garbage Collector: no liberás memoria a mano</h3>
+        <p>En C tenés que pedir memoria y liberarla vos mismo. En Java, cuando un objeto ya no tiene ninguna referencia apuntándolo, el <b>Garbage Collector (GC)</b> lo detecta y libera esa memoria solo. La JVM divide la memoria (heap) en generaciones: los objetos nuevos van a una zona "joven" que se limpia seguido y rápido; los que sobreviven mucho tiempo pasan a una zona "vieja" que se limpia menos seguido.</p>
+
+        <div class="callout">
+          <b>Por qué te importa en el día a día</b>
+          Cuando veas un error <code>OutOfMemoryError</code> en producción, o notás que la app tiene "pausas" raras cada tanto, generalmente el sospechoso es el Garbage Collector trabajando de más porque se están creando demasiados objetos innecesarios.
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 SPRING BOOT -->
+    <section class="sheet" id="spring-boot">
+      <div class="titleblock"><b>Plano N° 003</b>El framework<br>Escala 1:1</div>
+      <div class="eyebrow">03 · La herramienta</div>
+      <h2>¿Qué es Spring Boot, en serio?</h2>
+      <p class="lede">Spring (el framework grande) existe hace más de 20 años y resuelve casi cualquier problema de una app empresarial: manejo de dependencias, seguridad, acceso a datos, servidor web. El problema histórico era que configurarlo a mano era un infierno de XML. Spring Boot nació para arreglar eso.</p>
+
+      <div class="content">
+        <h3>Spring Boot = Spring, pero sin la parte tediosa</h3>
+        <ul>
+          <li><b>Auto-configuración:</b> Spring Boot mira qué librerías tenés en el proyecto y configura automáticamente lo que hace falta. Si detecta una librería de base de datos, ya te prepara la conexión con valores por defecto razonables.</li>
+          <li><b>Servidor embebido:</b> no necesitás instalar Tomcat aparte y desplegar un archivo <code>.war</code> ahí. Spring Boot trae Tomcat adentro del propio <code>.jar</code>. Corrés un comando y ya tenés un servidor web escuchando.</li>
+          <li><b>Starters:</b> en vez de elegir a mano 15 librerías compatibles entre sí, agregás un "starter" como <code>spring-boot-starter-web</code> y te trae todo lo necesario para hacer una API REST, con versiones ya probadas juntas.</li>
+        </ul>
+
+        <div class="diagram">
+          <svg viewBox="0 0 640 150" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrow1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" class="dg-dot"/>
+              </marker>
+            </defs>
+            <rect x="10" y="50" width="140" height="50" rx="2" class="dg-box"/>
+            <text x="80" y="80" text-anchor="middle" class="dg-text" font-size="12">Spring (core)</text>
+            <rect x="250" y="50" width="140" height="50" rx="2" class="dg-box-accent"/>
+            <text x="320" y="74" text-anchor="middle" class="dg-text" font-size="12">Spring Boot</text>
+            <text x="320" y="90" text-anchor="middle" class="dg-text-muted" font-size="9.5">auto-config + starters</text>
+            <rect x="490" y="50" width="140" height="50" rx="2" class="dg-box-copper"/>
+            <text x="560" y="74" text-anchor="middle" class="dg-text" font-size="12">Tu app</text>
+            <text x="560" y="90" text-anchor="middle" class="dg-text-muted" font-size="9.5">corriendo en 1 comando</text>
+            <line x1="150" y1="75" x2="245" y2="75" class="dg-line" marker-end="url(#arrow1)"/>
+            <line x1="390" y1="75" x2="485" y2="75" class="dg-line" marker-end="url(#arrow1)"/>
+          </svg>
+        </div>
+
+        <div class="callout green">
+          <b>La idea central</b>
+          Spring Boot no es "otro lenguaje" ni "otra forma de programar Java". Es una capa que te ahorra configuración manual, para que en vez de perder días armando el esqueleto del proyecto, te pongas a escribir la lógica de negocio directamente.
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 IOC / DI -->
+    <section class="sheet" id="ioc-di">
+      <div class="titleblock"><b>Plano N° 004</b>El corazón de Spring<br>Escala 1:1</div>
+      <div class="eyebrow">04 · Lo que más confunde al principio</div>
+      <h2>Inversión de Control e Inyección de Dependencias</h2>
+      <p class="lede">Esto es probablemente lo que menos te cierra hoy, y tiene sentido: es una idea, no una sintaxis. Una vez que la idea hace clic, las anotaciones se vuelven obvias.</p>
+
+      <div class="content">
+        <h3>La analogía de la cocina</h3>
+        <p>Imaginate un cocinero que, para hacer un plato, tuviera que él mismo cultivar las verduras, criar las gallinas y moler la harina. Así sería tu código si cada clase creara sus propias dependencias a mano con <code>new</code>: rígido, difícil de cambiar, imposible de testear sin todo el resto armado.</p>
+        <p>Ahora imaginate una cocina profesional: hay una despensa (el <b>contenedor de Spring</b>) que ya tiene todos los ingredientes listos. El cocinero simplemente pide "necesito harina" y se la entregan lista para usar. Él no sabe ni le importa cómo se hizo la harina.</p>
+        <p>Eso es <b>Inversión de Control (IoC)</b>: el control de "quién crea qué y cuándo" pasa de tu código a Spring. Y <b>Inyección de Dependencias (DI)</b> es el mecanismo concreto: Spring te "inyecta" (entrega) las dependencias ya armadas en vez de que vos las construyas.</p>
+
+        <h3>Cómo pasa esto en código real</h3>
+        <p>Al arrancar, Spring escanea tus clases buscando ciertas anotaciones, crea una instancia de cada una (le dicen <b>"bean"</b>) y las guarda en un contenedor llamado <b>ApplicationContext</b>. Cuando una clase necesita otra, Spring se la entrega automáticamente.</p>
+
+        <pre><code><span class="an">@Service</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">OrderService</span> {
+
+    <span class="kw tok" data-tip="private: solo visible dentro de esta misma clase. final: una vez asignado en el constructor, el valor no se puede reemplazar.">private final</span> <span class="tp">PaymentClient</span> paymentClient; <span class="cm">// una dependencia</span>
+
+    <span class="cm">// Spring ve este constructor, se da cuenta de que necesita</span>
+    <span class="cm">// un PaymentClient, y te pasa una instancia ya creada.</span>
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> OrderService(<span class="tp">PaymentClient</span> paymentClient) {
+        <span class="kw tok" data-tip="this: referencia al objeto actual — se usa para diferenciar un atributo de un parámetro con el mismo nombre.">this</span>.paymentClient = paymentClient;
+    }
+}</code></pre>
+
+        <p>Vos nunca escribís <code>new OrderService(new PaymentClientImpl())</code> en ningún lado. Spring arma ese árbol de dependencias solo, al arrancar la app.</p>
+
+        <h3>@Autowired: qué hace exactamente y cuándo hace falta escribirlo</h3>
+        <p><code>@Autowired</code> le dice a Spring "encontrame un bean que matchee este tipo, y ponelo acá". Se puede usar de tres formas:</p>
+        <pre><code><span class="cm">// 1. Por campo — la más común en tutoriales, la menos recomendada</span>
+<span class="an">@Autowired</span>
+<span class="kw tok" data-tip="private: solo visible dentro de esta clase.">private</span> <span class="tp">PaymentClient</span> paymentClient;
+
+<span class="cm">// 2. Por setter — poco usada hoy</span>
+<span class="an">@Autowired</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="kw tok" data-tip="void: el método no devuelve ningún valor.">void</span> setPaymentClient(<span class="tp">PaymentClient</span> paymentClient) { <span class="kw tok" data-tip="this: referencia al objeto actual — se usa para diferenciar un atributo de un parámetro con el mismo nombre.">this</span>.paymentClient = paymentClient; }
+
+<span class="cm">// 3. Por constructor — la recomendada (y la del ejemplo de arriba)</span>
+<span class="an">@Autowired</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> OrderService(<span class="tp">PaymentClient</span> paymentClient) { <span class="kw tok" data-tip="this: referencia al objeto actual — se usa para diferenciar un atributo de un parámetro con el mismo nombre.">this</span>.paymentClient = paymentClient; }</code></pre>
+        <p>El dato que sorprende: <b>desde Spring 4.3 (2016), si tu clase tiene un solo constructor, Spring lo infiere solo</b> — no hace falta escribir <code>@Autowired</code> arriba. Por eso el primer ejemplo de esta sección funciona sin la anotación. Solo la necesitás explícitamente cuando inyectás por campo o setter, o cuando la clase tiene más de un constructor y hay que indicarle a Spring cuál usar.</p>
+
+        <h4 style="font-size:15px;color:var(--ink);margin:20px 0 8px 0;">Cómo decide Spring <i>qué</i> inyectar</h4>
+        <p>Primero busca por <b>tipo</b>. Si hay un solo bean de ese tipo, listo. Si hay <b>varios candidatos</b> (por ejemplo, dos implementaciones de una misma interfaz), Spring tira <code>NoUniqueBeanDefinitionException</code> al arrancar, a menos que resuelvas la ambigüedad:</p>
+        <pre><code><span class="an">@Service</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">OrderService</span> {
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> OrderService(<span class="an">@Qualifier</span>(<span class="st">"email"</span>) <span class="tp">NotificacionService</span> notificacion) { <span class="cm">/* ... */</span> }
+}</code></pre>
+        <p><code>@Primary</code> sobre una implementación la marca como la opción "por defecto"; <code>@Qualifier("nombre")</code> en el punto de inyección elige explícitamente cuál. Si Spring no encuentra <b>ningún</b> candidato, el error es distinto: <code>NoSuchBeanDefinitionException</code> — el clásico "no bean found" que vas a ver de nuevo en la sección 21.</p>
+
+        <div class="callout red">
+          <b>Por qué constructor gana a campo</b>
+          Por campo no podés declarar el atributo <code>final</code> (cualquiera lo reasigna después), no podés testear con JUnit puro pasando un mock sin levantar Spring, y esconde qué necesita realmente la clase. Por constructor, Spring además te avisa al arrancar si armaste sin querer una dependencia circular (A necesita B, B necesita A) — por campo, a veces "funciona" de casualidad y explota más tarde.
+        </div>
+
+        <h3>Lombok: el atajo que vas a ver en casi todo proyecto real</h3>
+        <p>Escribir un constructor a mano por cada clase con dependencias se vuelve repetitivo. Por eso casi todos los proyectos Spring Boot reales usan <b>Lombok</b>, una librería que genera código repetitivo (constructores, getters, setters, <code>equals</code>/<code>hashCode</code>) a partir de anotaciones, en tiempo de compilación.</p>
+        <pre><code><span class="an">@Service</span>
+<span class="an">@RequiredArgsConstructor</span> <span class="cm">// genera el constructor con todos los campos "final"</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">OrderService</span> {
+    <span class="kw tok" data-tip="private: solo visible dentro de esta misma clase. final: una vez asignado en el constructor, el valor no se puede reemplazar.">private final</span> <span class="tp">PaymentClient</span> paymentClient; <span class="cm">// Lombok arma el constructor solo</span>
+}</code></pre>
+        <p>El resultado es exactamente el mismo <code>OrderService</code> de arriba, con menos líneas visibles. <code>@RequiredArgsConstructor</code> es la anotación específica que se recomienda para inyección de dependencias — no <code>@Data</code>, que además genera <code>equals</code>/<code>hashCode</code>/<code>toString</code> pensados para clases de datos, no para servicios.</p>
+        <div class="callout">
+          <b>El costo de Lombok</b>
+          Ahorra código, pero esconde lo que realmente pasa: alguien nuevo en el equipo que no conoce Lombok no va a entender de dónde sale ese constructor. Y usar <code>@Data</code> directo sobre una entidad de JPA es un error común: genera <code>equals</code>/<code>hashCode</code>/<code>toString</code> que pueden disparar consultas no deseadas o recursión infinita sobre relaciones cargadas de forma perezosa (<i>lazy loading</i>). Usalo con criterio: bien para DTOs y servicios, con cuidado en entidades.
+        </div>
+
+        <h3>Los "estereotipos": cómo Spring sabe qué es cada cosa</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Anotación</th><th>Para qué es</th></tr>
+          <tr><td class="k">@Component</td><td>Marca genérica: "esto es un bean, gestionalo vos, Spring".</td></tr>
+          <tr><td class="k">@Service</td><td>Un @Component que contiene lógica de negocio. Semánticamente dice "acá vive una regla del negocio".</td></tr>
+          <tr><td class="k">@Repository</td><td>Un @Component que accede a datos (base de datos, APIs externas).</td></tr>
+          <tr><td class="k">@Controller / @RestController</td><td>Un @Component que recibe peticiones HTTP.</td></tr>
+        </table></div>
+        <p style="font-size:13px;color:var(--slate);">Técnicamente los cuatro hacen casi lo mismo (crean un bean). La diferencia es semántica: le dicen a cualquiera que lea el código qué rol cumple esa clase en la arquitectura.</p>
+
+        <h3>Scope de un bean: ¿una instancia o muchas?</h3>
+        <p>Por defecto, cada bean es <b>singleton</b>: Spring crea una única instancia y la reutiliza para toda la aplicación, para todos los usuarios. Existe también <b>prototype</b>, donde se crea una instancia nueva cada vez que se pide. El 95% del tiempo vas a usar singleton sin pensarlo — pero cuando entendés esto, entendés también un bug clásico (lo vemos en la sección 21).</p>
+      </div>
+    </section>
+
+    <!-- 05 ANATOMIA -->
+    <section class="sheet" id="anatomia">
+      <div class="titleblock"><b>Plano N° 005</b>Estructura del edificio<br>Escala 1:1</div>
+      <div class="eyebrow">05 · Cómo se arma una app real</div>
+      <h2>Anatomía de una app Spring Boot</h2>
+      <p class="lede">Casi todas las apps Spring Boot que vas a tocar en el trabajo siguen el mismo esqueleto de tres capas. Una vez que lo identificás, cualquier proyecto nuevo se vuelve más fácil de leer.</p>
+
+      <div class="content">
+        <div class="diagram">
+          <svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" class="dg-dot"/>
+              </marker>
+            </defs>
+            <text x="30" y="30" class="dg-text-muted" font-size="11">Petición HTTP</text>
+            <line x1="30" y1="40" x2="30" y2="60" class="dg-line" marker-end="url(#arrow2)"/>
+
+            <rect x="10" y="65" width="620" height="40" rx="2" class="dg-box-copper"/>
+            <text x="30" y="90" class="dg-text" font-size="12">@RestController — recibe la request, valida entrada</text>
+
+            <line x1="320" y1="105" x2="320" y2="120" class="dg-line" marker-end="url(#arrow2)"/>
+            <rect x="10" y="125" width="620" height="40" rx="2" class="dg-box-accent"/>
+            <text x="30" y="150" class="dg-text" font-size="12">@Service — lógica de negocio, reglas, decisiones</text>
+
+            <line x1="320" y1="165" x2="320" y2="180" class="dg-line" marker-end="url(#arrow2)"/>
+            <rect x="10" y="185" width="620" height="30" rx="2" class="dg-box"/>
+            <text x="30" y="205" class="dg-text" font-size="12">@Repository — habla con la base de datos</text>
+          </svg>
+        </div>
+
+        <h3>Las anotaciones que vas a ver todos los días</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Anotación</th><th>Qué hace</th></tr>
+          <tr><td class="k">@SpringBootApplication</td><td>Va sobre la clase principal. Activa auto-configuración y el escaneo de componentes.</td></tr>
+          <tr><td class="k">@GetMapping / @PostMapping</td><td>Conectan un método del controller con una URL y un verbo HTTP (GET, POST...).</td></tr>
+          <tr><td class="k">@Autowired</td><td>Le dice a Spring "inyectá esta dependencia acá" (mejor usar constructor).</td></tr>
+          <tr><td class="k">@Configuration / @Bean</td><td>Para definir manualmente un bean cuando no alcanza con las anotaciones automáticas.</td></tr>
+          <tr><td class="k">@Value</td><td>Inyecta un valor desde <code>application.properties</code>.</td></tr>
+          <tr><td class="k">@Entity</td><td>(De JPA) marca una clase como tabla de base de datos.</td></tr>
+        </table></div>
+
+        <h3>application.properties / application.yml</h3>
+        <p>Es donde vive toda la configuración que no querés hardcodear: puerto del servidor, credenciales de base de datos, tamaño del pool de hilos, qué "perfil" está activo (dev, qa, prod). Cambiás un valor ahí y no tocás una sola línea de código Java.</p>
+        <p>Los <b>perfiles</b> son la pieza que completa esto: un archivo por entorno (<code>application-dev.yml</code>, <code>application-prod.yml</code>) con los valores que cambian entre ellos, y una sola propiedad — <code>spring.profiles.active=dev</code> — que decide cuál se aplica encima del archivo base. Con <code>@Profile("dev")</code> también podés hacer que un bean entero exista solo en un entorno: un servicio de emails falso en desarrollo, el real en producción.</p>
+      </div>
+    </section>
+
+    <!-- 06 HILOS -->
+    <section class="sheet" id="hilos">
+      <div class="titleblock"><b>Plano N° 006</b>Concurrencia<br>Escala 1:1</div>
+      <div class="eyebrow">06 · El tema fuerte de entrevista</div>
+      <h2>Hilos y concurrencia en Java</h2>
+      <p class="lede">Esto es probablemente lo que más te van a preguntar y lo que menos se ve "a simple vista" cuando programás. Vamos despacio porque vale la pena entenderlo bien una sola vez.</p>
+
+      <div class="content">
+        <h3>¿Qué es un hilo?</h3>
+        <p>Un <b>proceso</b> es un programa corriendo (por ejemplo, tu app Spring Boot completa). Un <b>hilo (thread)</b> es una línea de ejecución dentro de ese proceso. Un proceso puede tener muchos hilos corriendo "al mismo tiempo" (o alternándose muy rápido si hay un solo núcleo), y todos esos hilos comparten la misma memoria del proceso.</p>
+
+        <div class="callout">
+          <b>Por qué Java es conocido por esto</b>
+          Desde su primera versión, Java incluye la clase <code>Thread</code> y la interfaz <code>Runnable</code> como parte del lenguaje, no como una librería agregada después. Además, la JVM define un <b>Modelo de Memoria (JMM)</b> que especifica con precisión cómo los hilos ven los cambios que hacen otros hilos. Sobre esa base se construyó <code>java.util.concurrent</code>, un paquete maduro con pools de hilos, colecciones seguras para concurrencia y utilidades de sincronización.
+        </div>
+
+        <h3>Crear un hilo: dos formas</h3>
+        <pre><code><span class="cm">// Forma 1: extender Thread (poco flexible, "gasta" tu única herencia)</span>
+<span class="kw tok" data-tip="class: declara una clase, el molde a partir del cual se crean objetos con new.">class</span> <span class="tp">MiTarea</span> <span class="kw tok" data-tip="extends: esta clase hereda los atributos y métodos de la clase indicada.">extends</span> <span class="tp">Thread</span> {
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> run() { <span class="cm">/* trabajo */</span> }
+}
+
+<span class="cm">// Forma 2 (preferida): implementar Runnable y pasarlo a un hilo o pool</span>
+<span class="tp">Runnable</span> tarea = () <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> { <span class="cm">/* trabajo */</span> };
+<span class="kw tok" data-tip="new: crea una instancia (un objeto) de una clase en memoria y ejecuta su constructor.">new</span> <span class="tp">Thread</span>(tarea).start();</code></pre>
+
+        <h3>Thread pools: por qué casi nunca creás un Thread a mano</h3>
+        <p>Crear un hilo tiene un costo (memoria, tiempo del sistema operativo). Si tu app creara un hilo nuevo por cada tarea, se quedaría sin recursos rápido. Por eso se usa un <b>pool de hilos</b>: un grupo fijo de hilos reutilizables a los que les vas "enviando" tareas.</p>
+        <pre><code><span class="tp">ExecutorService</span> pool = <span class="tp">Executors</span>.newFixedThreadPool(<span class="st">10</span>);
+pool.submit(() <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> procesarPedido(pedido));</code></pre>
+
+        <div class="diagram">
+          <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg">
+            <text x="10" y="22" class="dg-text-muted" font-size="11">Peticiones HTTP entrando</text>
+            <circle cx="20" cy="45" r="4" class="dg-dot"/><circle cx="40" cy="45" r="4" class="dg-dot"/><circle cx="60" cy="45" r="4" class="dg-dot"/><circle cx="80" cy="45" r="4" class="dg-dot"/>
+            <line x1="60" y1="55" x2="60" y2="75" class="dg-line"/>
+            <rect x="10" y="80" width="620" height="100" rx="2" class="dg-box-accent"/>
+            <text x="30" y="100" class="dg-text" font-size="11.5">Thread pool embebido de Tomcat (server.tomcat.threads.max)</text>
+            <g font-size="10">
+              <rect x="30" y="115" width="130" height="24" rx="2" class="dg-fill"/><text x="45" y="131" class="dg-text">http-exec-1</text>
+              <rect x="175" y="115" width="130" height="24" rx="2" class="dg-fill"/><text x="190" y="131" class="dg-text">http-exec-2</text>
+              <rect x="320" y="115" width="130" height="24" rx="2" class="dg-fill"/><text x="335" y="131" class="dg-text">http-exec-3</text>
+              <rect x="465" y="115" width="130" height="24" rx="2" class="dg-fill"/><text x="480" y="131" class="dg-text">http-exec-...</text>
+            </g>
+            <text x="30" y="160" class="dg-text-muted" font-size="10">Cada request se atiende en un hilo distinto del pool — por eso tu app</text>
+            <text x="30" y="174" class="dg-text-muted" font-size="10">puede atender a muchos usuarios "al mismo tiempo".</text>
+          </svg>
+        </div>
+
+        <div class="callout green">
+          <b>Conexión directa con Spring Boot</b>
+          Nunca escribiste <code>new Thread()</code> en tu app Spring Boot y aun así ya usás hilos todo el tiempo: cada petición HTTP que llega la atiende un hilo distinto tomado del pool de Tomcat embebido. Eso es lo que te permite atender a muchos usuarios en simultáneo sin bloquearte.
+        </div>
+
+        <h3>@Async: sacar trabajo del hilo principal</h3>
+        <p>Si un endpoint tiene que, por ejemplo, mandar un email que tarda 3 segundos, no querés que el usuario espere esos 3 segundos mirando la pantalla. Con <code>@Async</code> ese trabajo se ejecuta en otro hilo (de otro pool separado) y el hilo que atendió la petición queda libre enseguida.</p>
+        <pre><code><span class="an">@Async</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> enviarEmailDeConfirmacion(<span class="tp">Pedido</span> pedido) {
+    <span class="cm">// esto corre en otro hilo, no bloquea la respuesta HTTP</span>
+}</code></pre>
+
+        <h3>Cuando dos hilos chocan: race conditions</h3>
+        <p>Si dos hilos leen y modifican la misma variable al mismo tiempo, sin ningún tipo de coordinación, el resultado puede quedar mal. Clásico ejemplo: un contador compartido.</p>
+        <pre><code><span class="kw tok" data-tip="private: solo visible dentro de esta clase. int: tipo numérico entero, sin decimales.">private int</span> contador = <span class="st">0</span>;
+
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> incrementar() {
+    contador++; <span class="cm">// NO es atómico: leer + sumar + guardar son 3 pasos</span>
+}<span class="cm">
+// Si dos hilos ejecutan esto "al mismo tiempo", pueden pisarse
+// y el contador termina con un valor menor al esperado.</span></code></pre>
+        <p>La solución típica es sincronizar el acceso o usar un tipo pensado para esto:</p>
+        <pre><code><span class="kw tok" data-tip="private: solo visible dentro de esta misma clase. final: una vez asignado en el constructor, el valor no se puede reemplazar.">private final</span> <span class="tp">AtomicInteger</span> contador = <span class="kw tok" data-tip="new: crea una instancia (un objeto) de una clase en memoria y ejecuta su constructor.">new</span> <span class="tp">AtomicInteger</span>(<span class="st">0</span>);
+
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> incrementar() {
+    contador.incrementAndGet(); <span class="cm">// operación atómica, segura entre hilos</span>
+}</code></pre>
+
+        <h3>synchronized, volatile y deadlock — al vuelo</h3>
+        <ul>
+          <li><b>synchronized:</b> marca un bloque o método para que solo un hilo a la vez pueda ejecutarlo. Simple, pero si abusás, le pega a la performance.</li>
+          <li><b>volatile:</b> garantiza que todos los hilos vean el valor más actualizado de una variable (visibilidad), pero no la hace atómica por sí sola.</li>
+          <li><b>deadlock:</b> dos hilos se quedan esperando eternamente un recurso que tiene el otro bloqueado. Se evita, entre otras cosas, tomando los locks siempre en el mismo orden.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 07 CONCURRENCIA MODERNA -->
+    <section class="sheet" id="concurrencia-moderna">
+      <div class="titleblock"><b>Plano N° 007</b>Concurrencia hoy<br>Escala 1:1</div>
+      <div class="eyebrow">07 · Lo que cambió en los últimos años</div>
+      <h2>Virtual Threads y programación reactiva: cuándo usar cada una</h2>
+      <p class="lede">Todo lo de la sección anterior sigue siendo válido, pero hay un problema concreto que la industria viene resolviendo de dos formas distintas en los últimos diez años. Acá el criterio importa más que la sintaxis.</p>
+
+      <div class="content">
+        <h3>El problema real: miles de peticiones esperando</h3>
+        <p>Un hilo de plataforma (el <code>Thread</code> tradicional de toda la vida) le cuesta al sistema operativo: reserva memoria (~1MB de stack) y tiempo de creación. Si tu app tiene que atender 10.000 peticiones simultáneas que, en su mayoría, están <b>esperando</b> — una respuesta de otra API, una query lenta a la base de datos — un pool de hilos tradicional se queda corto o reserva memoria de más solo para hilos que no están haciendo nada, literalmente dormidos esperando I/O.</p>
+
+        <h3>Solución histórica: programación reactiva</h3>
+        <p>Spring WebFlux (basado en Project Reactor) resuelve esto con un modelo <b>no bloqueante</b>: en vez de que un hilo se quede esperando una respuesta, ese hilo queda libre para atender otra cosa, y cuando la respuesta llega, se retoma el trabajo donde quedó. El costo es que programás distinto — todo encadenado con <code>Mono</code> y <code>Flux</code> — y depurar un stack trace reactivo es bastante más difícil que uno tradicional.</p>
+
+        <h3>Solución moderna: Virtual Threads (Java 21+)</h3>
+        <p>Los <b>virtual threads</b> (Project Loom) son hilos livianísimos que gestiona la propia JVM, no el sistema operativo. Podés crear cientos de miles sin problema. Lo interesante: programás exactamente igual que siempre, con código secuencial "bloqueante" de toda la vida. Cuando un virtual thread queda esperando una respuesta de I/O, la JVM libera por debajo el hilo de plataforma real para que otro virtual thread lo use mientras tanto. Spring Boot 3.2+ los activa con una sola línea:</p>
+        <pre><code><span class="cm"># application.properties</span>
+spring.threads.virtual.enabled=<span class="kw tok" data-tip="true: literal booleano — representa el valor “verdadero”.">true</span></code></pre>
+
+        <div class="tablewrap"><table>
+          <tr><th>Enfoque</th><th>Cómo programás</th><th>Curva de aprendizaje</th><th>Cuándo brilla</th></tr>
+          <tr><td class="k">Hilos tradicionales</td><td>Secuencial, bloqueante</td><td><span class="stamp high">baja</span></td><td>Cargas moderadas, apps CRUD estándar</td></tr>
+          <tr><td class="k">Reactivo (WebFlux)</td><td>Encadenado, no bloqueante</td><td><span class="stamp low">alta</span></td><td>Streaming de datos, backpressure fino, miles de conexiones persistentes (WebSockets)</td></tr>
+          <tr><td class="k">Virtual Threads</td><td>Secuencial, bloqueante (¡igual que siempre!)</td><td><span class="stamp high">baja</span></td><td>Miles de peticiones I/O-bound sin reescribir el estilo de código</td></tr>
+        </table></div>
+
+        <div class="callout green">
+          <b>El criterio que importa</b>
+          Si tu app es <b>I/O-bound</b> (habla con base de datos, con APIs externas — el caso de casi cualquier backend empresarial típico) y querés simplicidad, hoy la respuesta por defecto es <b>Virtual Threads</b>: mismo estilo de código, mucha más capacidad de concurrencia. Reactive sigue teniendo sentido en nichos específicos: pipelines de streaming, sistemas con backpressure real, o cuando ya heredaste una base de código reactiva. Si en cambio tu app es <b>CPU-bound</b> (cálculos pesados, no esperas de red), ni virtual threads ni reactive te resuelven nada — ahí el problema es paralelizar el cálculo mismo entre núcleos, no la concurrencia de I/O.
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 PERSISTENCIA -->
+    <section class="sheet" id="persistencia">
+      <div class="titleblock"><b>Plano N° 008</b>Acceso a datos<br>Escala 1:1</div>
+      <div class="eyebrow">08 · Cómo tu app habla con la base de datos</div>
+      <h2>JPA, JDBC y transacciones: el criterio detrás de cada uno</h2>
+      <p class="lede">Spring Data JPA resuelve el 80% de los casos con muy poco código. El otro 20% es donde hay que saber cuándo bajar de nivel.</p>
+
+      <div class="content">
+        <h3>Spring Data JPA / Hibernate: productividad con letra chica</h3>
+        <p>JPA es una especificación y Hibernate la implementación más usada: un <b>ORM</b> (Object-Relational Mapper) que mapea tus clases Java a tablas. La ventaja es enorme — definís una interfaz <code>PedidoRepository extends JpaRepository</code> y métodos como <code>findByClienteEmail(String email)</code> se generan solos, sin escribir SQL. La desventaja es que abstrae tanto que es fácil generar queries ineficientes sin darte cuenta.</p>
+        <p style="font-size:13px;color:var(--slate);">Ojo con el import de <code>@Entity</code>: si tu proyecto es Spring Boot 2.x vas a ver <code>javax.persistence.Entity</code>; si es 3.x o 4.x, es <code>jakarta.persistence.Entity</code>. Misma anotación, paquete distinto — el porqué está en la sección 20.</p>
+
+        <h3>El problema N+1 (el clásico de toda entrevista)</h3>
+        <p>Si tenés <code>Pedido</code> relacionado con <code>Cliente</code>, y pedís una lista de 100 pedidos para después leer <code>pedido.getCliente().getNombre()</code> de cada uno, sin cuidado Hibernate hace 1 query para traer los 100 pedidos y <b>100 queries adicionales</b>, una por cada cliente. Se soluciona con un fetch join explícito, <code>@EntityGraph</code>, o trayendo directamente un DTO con la proyección que necesitás.</p>
+
+        <h3>Cuándo bajar a SQL directo (JdbcTemplate, MyBatis)</h3>
+        <p>Para reportes con varios joins complejos, agregaciones pesadas, o cuando ya mediste que el ORM genera algo lento, a veces conviene escribir el SQL a mano. No es "peor" que JPA — es la herramienta correcta aplicada quirúrgicamente.</p>
+
+        <div class="tablewrap"><table>
+          <tr><th>Herramienta</th><th>Cuándo usarla</th></tr>
+          <tr><td class="k">Spring Data JPA</td><td>CRUD estándar, la mayoría de las entidades del dominio</td></tr>
+          <tr><td class="k">JdbcTemplate / SQL nativo</td><td>Reportes complejos, queries de performance crítica ya medida</td></tr>
+          <tr><td class="k">Proyecciones DTO</td><td>Cuando solo necesitás 3 campos de una entidad con 20, para no cargar de más</td></tr>
+        </table></div>
+
+        <h3>@Transactional: todo o nada</h3>
+        <p>Asegura que un conjunto de operaciones se ejecuten como una unidad: si algo falla a mitad de camino, se revierte todo (rollback). El ejemplo de siempre es una transferencia bancaria: restar de una cuenta y sumar a otra tienen que pasar juntas o ninguna de las dos.</p>
+        <pre><code><span class="an">@Transactional</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> transferir(<span class="tp">Cuenta</span> origen, <span class="tp">Cuenta</span> destino, <span class="tp">BigDecimal</span> monto) {
+    origen.restar(monto);
+    destino.sumar(monto); <span class="cm">// si esto falla, la resta de arriba también se revierte</span>
+}</code></pre>
+
+        <div class="callout red">
+          <b>La trampa de la auto-invocación</b>
+          Si un método con <code>@Transactional</code> es llamado desde <b>otro método de la misma clase</b> (auto-invocación), Spring no lo intercepta y la transacción no se aplica. ¿Por qué? Porque <code>@Transactional</code> funciona con un proxy que envuelve al bean, y una llamada interna (<code>this.metodo()</code>) nunca pasa por ese proxy. La solución es mover ese método a otro bean o inyectarse a sí mismo a través del proxy. El porqué completo de cómo funcionan estos proxies está en la sección 14.
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 ERRORES -->
+    <section class="sheet" id="errores">
+      <div class="titleblock"><b>Plano N° 009</b>Robustez<br>Escala 1:1</div>
+      <div class="eyebrow">09 · Cuando algo sale mal</div>
+      <h2>Manejo de errores y validación</h2>
+      <p class="lede">Un cliente de tu API nunca debería recibir un stack trace crudo. Esto es lo mínimo para responder errores de forma consistente y predecible.</p>
+
+      <div class="content">
+        <h3>Validar la entrada antes de tu lógica de negocio</h3>
+        <p>Con <code>@Valid</code> sobre el parámetro del controller y anotaciones de Bean Validation (<code>@NotNull</code>, <code>@Size</code>, <code>@Email</code>) sobre los campos del DTO, Spring valida automáticamente antes de que tu código se ejecute. Si algo no cumple, devuelve un 400 sin que escribas un solo <code>if</code>.</p>
+        <p style="font-size:13px;color:var(--slate);">El ejemplo de abajo usa <code>record</code> (Java 16+). Si estás en Java 8 o 11, usá una clase normal con constructor y getters — Lombok con <code>@Value</code> te ahorra ese boilerplate igual. Y de nuevo: <code>javax.validation.constraints.NotNull</code> en Spring Boot 2.x, <code>jakarta.validation.constraints.NotNull</code> en 3.x/4.x (sección 20).</p>
+        <pre><code><span class="kw tok" data-tip="public: accesible desde cualquier paquete. record (Java 16+): clase inmutable que genera sola constructor, getters, equals, hashCode y toString.">public record</span> <span class="tp">CrearPedidoRequest</span>(
+    <span class="an">@NotBlank</span> <span class="tp">String</span> cliente,
+    <span class="an">@NotNull</span> <span class="an">@Positive</span> <span class="tp">BigDecimal</span> monto
+) {}
+
+<span class="an">@PostMapping</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">ResponseEntity</span>&lt;<span class="tp">Pedido</span>&gt; crear(<span class="an">@Valid</span> <span class="an">@RequestBody</span> <span class="tp">CrearPedidoRequest</span> req) { ... }</code></pre>
+
+        <h3>Un solo lugar para manejar excepciones</h3>
+        <p>En vez de repetir <code>try/catch</code> en cada controller, <code>@RestControllerAdvice</code> centraliza el manejo de errores para toda la app: cada tipo de excepción se mapea a una respuesta HTTP consistente.</p>
+        <pre><code><span class="an">@RestControllerAdvice</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">GlobalExceptionHandler</span> {
+
+    <span class="an">@ExceptionHandler</span>(<span class="tp">PedidoNoEncontradoException</span>.<span class="kw tok" data-tip="class: declara una clase, el molde a partir del cual se crean objetos con new.">class</span>)
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">ResponseEntity</span>&lt;<span class="tp">String</span>&gt; handleNoEncontrado(<span class="tp">PedidoNoEncontradoException</span> ex) {
+        <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> <span class="tp">ResponseEntity</span>.status(<span class="tp">HttpStatus</span>.NOT_FOUND).body(ex.getMessage());
+    }
+}</code></pre>
+
+        <h3>Códigos HTTP: el criterio, no la lista completa</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Código</th><th>Cuándo usarlo</th></tr>
+          <tr><td class="k">200 / 201 / 204</td><td>Éxito. 201 al crear algo, 204 cuando no hay contenido que devolver (ej. un DELETE)</td></tr>
+          <tr><td class="k">400</td><td>La petición está mal formada o no pasa validación — culpa del cliente</td></tr>
+          <tr><td class="k">401</td><td>No sabemos quién sos (falta autenticación)</td></tr>
+          <tr><td class="k">403</td><td>Sabemos quién sos, pero no tenés permiso para esto</td></tr>
+          <tr><td class="k">404</td><td>El recurso no existe</td></tr>
+          <tr><td class="k">409</td><td>Conflicto — ej. ya existe un recurso con ese identificador único</td></tr>
+          <tr><td class="k">500</td><td>Error nuestro, no del cliente — algo que no debería haber pasado</td></tr>
+        </table></div>
+
+        <div class="callout">
+          <b>Checked vs unchecked exceptions</b>
+          Java te deja elegir. Las <i>checked</i> (heredan de <code>Exception</code>) obligan a declarar o capturar el error — usalas para errores esperables que quien llama debería manejar sí o sí. Las <i>unchecked</i> (heredan de <code>RuntimeException</code>) no obligan nada — son la elección por defecto en la mayoría del código Spring moderno, dejando que <code>@RestControllerAdvice</code> las capture centralizadamente en vez de ensuciar cada método con <code>throws</code>.
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 TESTING -->
+    <section class="sheet" id="testing">
+      <div class="titleblock"><b>Plano N° 010</b>Confianza en el código<br>Escala 1:1</div>
+      <div class="eyebrow">10 · Qué testear y con qué nivel</div>
+      <h2>Testing: el criterio importa más que la sintaxis</h2>
+      <p class="lede">Escribir el test lo puede hacer una IA en segundos. Decidir qué merece un test, con qué nivel de aislamiento y por qué, sigue siendo una decisión tuya.</p>
+
+      <div class="content">
+        <h3>La pirámide, en la práctica</h3>
+        <p>Muchos tests unitarios rápidos y aislados (milisegundos, sin levantar Spring), bastantes menos tests de integración (levantan el contexto de Spring o una parte de él, más lentos), y muy pocos end-to-end (toda la app corriendo, los más lentos y frágiles). El error común es invertir la pirámide: pocos unitarios y todo probado a fuerza de tests de integración lentísimos.</p>
+
+        <h3>Mock vs real: el criterio</h3>
+        <p>Mockeá (con Mockito) una dependencia cuando es lenta, externa, o no determinística — una llamada a una API de pagos de terceros, por ejemplo. Usá la implementación real (o una de integración liviana) cuando lo que estás verificando es justamente que las piezas conectan bien: que la query SQL trae lo que esperás, que el JSON se mapea correctamente.</p>
+
+        <pre><code><span class="an">@ExtendWith</span>(<span class="tp">MockitoExtension</span>.<span class="kw tok" data-tip="class: declara una clase, el molde a partir del cual se crean objetos con new.">class</span>)
+<span class="kw tok" data-tip="class: declara una clase, el molde a partir del cual se crean objetos con new.">class</span> <span class="tp">OrderServiceTest</span> {
+
+    <span class="an">@Mock</span> <span class="tp">PaymentClient</span> paymentClient; <span class="cm">// no llamamos a un servicio real de pagos</span>
+
+    <span class="an">@Test</span>
+    <span class="kw tok" data-tip="void: el método no devuelve ningún valor.">void</span> confirmaPedidoCuandoElPagoEsAprobado() {
+        <span class="kw tok" data-tip="when (Mockito): define qué debe responder el mock cuando se llame al método indicado.">when</span>(paymentClient.procesar(<span class="kw tok" data-tip="any (Mockito): matcher que acepta cualquier valor de ese tipo como argumento.">any</span>())).thenReturn(<span class="tp">Resultado</span>.APROBADO);
+        <span class="cm">// ...</span>
+    }
+}</code></pre>
+
+        <h3>Los "slices" de Spring Boot Test</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Anotación</th><th>Qué levanta</th></tr>
+          <tr><td class="k">@SpringBootTest</td><td>Todo el contexto de la app — el más pesado, para pocos tests de integración clave</td></tr>
+          <tr><td class="k">@WebMvcTest</td><td>Solo la capa web (controllers), mockeando el resto — rápido para probar endpoints</td></tr>
+          <tr><td class="k">@DataJpaTest</td><td>Solo la capa de persistencia, con una base en memoria — para probar queries</td></tr>
+          <tr><td class="k">Ninguna (JUnit + Mockito puro)</td><td>Test unitario de un Service, sin tocar Spring para nada — el más rápido y el que más deberías tener</td></tr>
+        </table></div>
+
+        <div class="callout green">
+          <b>Regla práctica</b>
+          Test unitario para toda la lógica de negocio no trivial (Service). Test de integración liviano (<code>@WebMvcTest</code> o <code>@DataJpaTest</code>) para verificar que un flujo crítico conecta de punta a punta — no para cada endpoint. <code>@SpringBootTest</code> completo, con moderación: son los más lentos de la suite.
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 ARQUITECTURA -->
+    <section class="sheet" id="arquitectura">
+      <div class="titleblock"><b>Plano N° 011</b>Decisión de arquitectura<br>Escala 1:1</div>
+      <div class="eyebrow">11 · La pregunta que más se discute</div>
+      <h2>Monolito vs microservicios: el criterio real</h2>
+      <p class="lede">No es una pregunta técnica solamente — es una pregunta sobre cómo trabaja tu equipo. La respuesta por defecto hoy no es la que se pensaba hace diez años.</p>
+
+      <div class="content">
+        <h3>Qué es cada uno</h3>
+        <p>Un <b>monolito</b> es una sola aplicación desplegada como una unidad — todas las capas (controller, service, repository) viven en el mismo proceso. <b>Microservicios</b> divide el sistema en aplicaciones independientes, cada una con su propia base de datos, desplegadas y escaladas por separado, que se comunican por red (HTTP, mensajería).</p>
+
+        <h3>Lo que ganás con un monolito</h3>
+        <ul>
+          <li>Desarrollo, testing y despliegue simples — un solo proyecto, un solo pipeline.</li>
+          <li>Transacciones fáciles: todo pasa en el mismo proceso y la misma base de datos.</li>
+          <li>Ideal cuando el dominio del negocio todavía no está bien entendido — dividir en servicios antes de tiempo significa dividir mal, y después es carísimo corregir los límites.</li>
+        </ul>
+
+        <h3>Lo que ganás con microservicios</h3>
+        <ul>
+          <li>Escalás solo la parte que lo necesita, no todo el sistema junto.</li>
+          <li>Equipos grandes pueden trabajar en paralelo sin pisarse el mismo código.</li>
+          <li>Cada servicio puede tener su propia tecnología, ciclo de despliegue y ritmo de cambio.</li>
+        </ul>
+        <p>El costo: complejidad operativa real — latencia de red donde antes había una llamada de método, transacciones distribuidas (mucho más difíciles que un <code>@Transactional</code> local), y necesidad de observabilidad seria para poder rastrear una request que cruza cinco servicios.</p>
+
+        <div class="callout green">
+          <b>El criterio que se usa hoy</b>
+          La recomendación más aceptada en la industria — incluso entre quienes popularizaron los microservicios — es "empezá con un <b>monolito bien modularizado</b>" (paquetes con límites claros, bajo acoplamiento interno, ideas de bounded context de DDD aunque todo corra en un solo proceso). Migrás a microservicios cuando aparece un dolor concreto: un equipo tan grande que se pisa constantemente en el mismo código, una parte del sistema que necesita escalar muchísimo más que el resto, o la necesidad real de desplegar partes de forma independiente y frecuente. Migrar por moda, sin ese dolor concreto, casi siempre sale más caro de lo que resuelve.
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 SEGURIDAD -->
+    <section class="sheet" id="seguridad">
+      <div class="titleblock"><b>Plano N° 012</b>Quién entra y qué puede hacer<br>Escala 1:1</div>
+      <div class="eyebrow">12 · Lo mínimo indispensable</div>
+      <h2>Seguridad: autenticación y autorización</h2>
+      <p class="lede">Spring Security tiene mil detalles de configuración. Lo que de verdad importa entender es la distinción de fondo y un par de decisiones de diseño.</p>
+
+      <div class="content">
+        <h3>Autenticación vs autorización</h3>
+        <p><b>Autenticación</b> responde "¿quién sos?" (login, verificar usuario y contraseña, validar un token). <b>Autorización</b> responde "¿qué podés hacer, ya sabiendo quién sos?" (¿este usuario puede borrar pedidos, o solo verlos?). Son dos pasos distintos y confundirlos genera bugs de seguridad.</p>
+
+        <h3>Sesiones stateful vs JWT stateless</h3>
+        <p>El modelo clásico web guarda una <b>sesión</b> en el servidor (stateful): el server recuerda quién sos entre peticiones. Funciona bien para apps monolíticas renderizadas en el propio servidor, pero complica escalar horizontalmente (todas las instancias necesitan compartir el estado de sesión).</p>
+        <p>Un <b>JWT</b> (JSON Web Token) es stateless: el propio token lleva firmada la información del usuario, y el servidor no guarda nada — solo verifica la firma en cada request. Escala mejor horizontalmente y es el estándar para APIs consumidas por SPAs (aplicaciones front tipo React o Angular), apps mobile, y comunicación entre microservicios. Su costo: un token emitido no se puede "revocar" fácilmente antes de que venza — por eso se usan expiraciones cortas combinadas con un <b>refresh token</b> que permite renovarlo.</p>
+
+        <h3>Cómo se arma: el SecurityFilterChain</h3>
+        <p>Spring Security no es magia dentro de tus controllers — es una <b>cadena de filtros</b> parada delante de ellos. Cada request pasa por esa cadena antes de tocar tu código: ahí se decide si la ruta es pública, si el token es válido y si el usuario tiene el rol necesario. Toda esa política se declara en un solo lugar:</p>
+        <pre><code><span class="an">@Configuration</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">SecurityConfig</span> {
+
+    <span class="an">@Bean</span>
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">SecurityFilterChain</span> filterChain(<span class="tp">HttpSecurity</span> http) <span class="kw tok" data-tip="throws: declara que el método puede lanzar esta excepción — quien lo llama debe manejarla o volver a declararla.">throws</span> <span class="tp">Exception</span> {
+        <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> http
+            .csrf(csrf <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> csrf.disable())    <span class="cm">// API stateless con JWT — abajo el porqué</span>
+            .sessionManagement(s <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> s.sessionCreationPolicy(<span class="tp">SessionCreationPolicy</span>.STATELESS))
+            .authorizeHttpRequests(auth <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> auth
+                .requestMatchers(<span class="st">"/api/auth/**"</span>).permitAll()    <span class="cm">// login y registro: sin token</span>
+                .requestMatchers(<span class="tp">HttpMethod</span>.DELETE, <span class="st">"/api/pedidos/**"</span>).hasRole(<span class="st">"ADMIN"</span>)
+                .anyRequest().authenticated())    <span class="cm">// todo lo demás: solo con token válido</span>
+            .build();
+    }
+}</code></pre>
+        <p>¿Y el JWT dónde se valida exactamente? En un filtro de esa misma cadena (uno propio, o el que trae el módulo OAuth2 Resource Server): lee el header <code>Authorization: Bearer ...</code>, verifica la firma y la expiración, y deja al usuario cargado en el contexto de seguridad. Recién después, para reglas más finas a nivel de método puntual, entra <code>@PreAuthorize</code>:</p>
+        <pre><code><span class="an">@PreAuthorize</span>(<span class="st">"hasRole('ADMIN')"</span>)
+<span class="an">@DeleteMapping</span>(<span class="st">"/pedidos/{id}"</span>)
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> eliminar(<span class="an">@PathVariable</span> <span class="tp">Long</span> id) { ... }</code></pre>
+
+        <h3>CORS: el error que te vas a comer la primera semana</h3>
+        <p>Si un front en <code>localhost:3000</code> llama a tu API en <code>localhost:8080</code>, el navegador bloquea la respuesta y tira el famoso error de CORS. No es un bug de tu API ni del front: es el navegador aplicando una protección (<i>same-origin policy</i>) que impide que una página lea respuestas de otro origen, salvo que el servidor lo permita explícitamente. Por eso la solución es siempre <b>del lado del servidor</b>: declarar qué orígenes pueden consumir tu API (<code>http.cors(...)</code> más un bean <code>CorsConfigurationSource</code> con los orígenes permitidos). Agregar headers a mano desde el front no arregla nada — la decisión la toma tu servidor, y el que la hace cumplir es el navegador.</p>
+
+        <div class="callout">
+          <b>CSRF: por qué se deshabilita (y cuándo no)</b>
+          Un ataque CSRF engaña al navegador del usuario para que dispare una request a tu API aprovechando la <b>cookie de sesión</b> que el navegador adjunta solo, sin preguntar. Si tu API es stateless con JWT en el header <code>Authorization</code> — que el navegador <i>no</i> agrega automáticamente — ese vector no existe, y deshabilitar CSRF es lo correcto y lo estándar. Pero si tu app usa sesiones con cookies (el modelo stateful de arriba), la protección CSRF se queda <b>activada</b>. Es pregunta de entrevista clásica justamente porque revela si entendés el mecanismo o solo copiaste la config.
+        </div>
+
+        <div class="callout red">
+          <b>Lo no negociable</b>
+          Nunca guardes contraseñas en texto plano ni con un hash simple (MD5, SHA1 solo). Usá un algoritmo pensado para contraseñas como <b>BCrypt</b> (Spring Security lo trae listo con <code>BCryptPasswordEncoder</code>), que es intencionalmente lento para hacer inviable un ataque de fuerza bruta.
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 OBSERVABILIDAD -->
+    <section class="sheet" id="observabilidad">
+      <div class="titleblock"><b>Plano N° 013</b>Ver lo que pasa en producción<br>Escala 1:1</div>
+      <div class="eyebrow">13 · Lo que te salva a las 3am</div>
+      <h2>Observabilidad: logs, métricas y Actuator</h2>
+      <p class="lede">Cuando algo falla en producción, no vas a poder poner un breakpoint. Esto es lo que te deja entender qué pasó sin acceso directo al servidor.</p>
+
+      <div class="content">
+        <h3>Spring Boot Actuator: endpoints de monitoreo gratis</h3>
+        <p>Agregando el starter de Actuator, tu app expone automáticamente endpoints como <code>/actuator/health</code> (¿está viva la app? ¿y sus dependencias, como la base de datos?) y <code>/actuator/metrics</code>, sin escribir código propio. Es lo primero que consulta cualquier sistema de monitoreo o balanceador de carga para saber si tu instancia está sana.</p>
+
+        <h3>Niveles de log: el criterio de cuándo usar cada uno</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Nivel</th><th>Cuándo usarlo</th></tr>
+          <tr><td class="k">ERROR</td><td>Algo falló y requiere atención — una excepción no esperada, una integración caída</td></tr>
+          <tr><td class="k">WARN</td><td>Algo raro pasó pero la app se recuperó sola — vale la pena mirarlo, no es urgente</td></tr>
+          <tr><td class="k">INFO</td><td>Eventos de negocio importantes — "pedido #123 creado", arranque de la app</td></tr>
+          <tr><td class="k">DEBUG</td><td>Detalle fino para diagnosticar un problema puntual — se activa solo cuando hace falta</td></tr>
+        </table></div>
+
+        <h3>Métricas y trazas: la vista de conjunto</h3>
+        <p>Micrometer (integrado en Spring Boot) expone métricas — tiempos de respuesta, uso de memoria, tamaño de pools de hilos — en un formato que herramientas como Prometheus pueden recolectar y Grafana graficar. En sistemas con varios servicios, un <b>id de correlación</b> (un identificador único por request que viaja entre todos los servicios que la atienden) es lo que te permite reconstruir el camino completo de una petición que falló en algún punto del medio.</p>
+
+        <div class="callout">
+          <b>El hábito que te recomiendo</b>
+          Logueá al entrar y salir de cada operación de negocio importante, con datos suficientes para identificar el caso (id de pedido, id de usuario) pero <b>nunca</b> datos sensibles (contraseñas, tarjetas, tokens completos). El día que necesites reconstruir un incidente en producción, esos logs son la única ventana que vas a tener.
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 BEAN LIFECYCLE Y AOP -->
+    <section class="sheet" id="aop">
+      <div class="titleblock"><b>Plano N° 014</b>Por debajo de las anotaciones<br>Escala 1:1</div>
+      <div class="eyebrow">14 · El "por qué" detrás de los proxies</div>
+      <h2>Ciclo de vida de un bean y AOP</h2>
+      <p class="lede">En la sección 08 vimos que <code>@Transactional</code> no aplica si un método se llama a sí mismo. Acá está el porqué completo: qué pasa realmente cuando Spring arranca un bean, y de dónde salen esos proxies que hacen posible media docena de anotaciones que ya usás todos los días.</p>
+
+      <div class="content">
+        <h3>Qué pasa cuando Spring crea un bean, en orden</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Paso</th><th>Qué hace Spring</th></tr>
+          <tr><td class="k">1. Instancia</td><td>Llama al constructor, con las dependencias ya resueltas (sección 04)</td></tr>
+          <tr><td class="k">2. Inyecta</td><td>Completa los campos/setters que falten inyectar</td></tr>
+          <tr><td class="k">3. @PostConstruct</td><td>Ejecuta tu método marcado con esta anotación — para inicialización propia (abrir una conexión, cargar una config)</td></tr>
+          <tr><td class="k">4. Proxy (si aplica)</td><td>Si el bean usa <code>@Transactional</code>, <code>@Async</code> o un aspecto tuyo, acá Spring lo envuelve en un proxy</td></tr>
+          <tr><td class="k">5. Bean listo</td><td>Se guarda en el <code>ApplicationContext</code>, disponible para inyectarse en otros lados</td></tr>
+          <tr><td class="k">6. @PreDestroy</td><td>Al apagar la app, ejecuta tu método de limpieza (cerrar conexiones, liberar recursos)</td></tr>
+        </table></div>
+        <p>El detalle que sorprende: el proxy se crea <b>después</b> de <code>@PostConstruct</code>. Eso significa que dentro de un método <code>@PostConstruct</code>, llamarte a vos mismo todavía no pasa por ningún proxy — el mismo problema de auto-invocación de la sección 08, pero un paso antes.</p>
+
+        <pre><code><span class="an">@PostConstruct</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> inicializar() {
+    <span class="cm">// corre una sola vez, apenas el bean está armado</span>
+}
+
+<span class="an">@PreDestroy</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> limpiar() {
+    <span class="cm">// corre al apagar la app — para cerrar recursos prolijamente</span>
+}</code></pre>
+
+        <h3>AOP: código transversal que no pertenece a tu lógica de negocio</h3>
+        <p>Hay código que se repite igual en un montón de lugares sin relación directa con lo que hace cada método: logging, medir cuánto tarda algo, verificar permisos, envolver en una transacción. A esto se le llama una <b>cross-cutting concern</b> (preocupación transversal). AOP (<b>programación orientada a aspectos</b>) permite escribir ese código una sola vez y aplicarlo donde haga falta, sin ensuciar cada método con las mismas líneas.</p>
+        <pre><code><span class="an">@Aspect</span>
+<span class="an">@Component</span>
+<span class="kw tok" data-tip="public: la clase es accesible desde cualquier otro paquete. class: declara una clase, el molde para crear objetos.">public class</span> <span class="tp">LoggingAspect</span> {
+
+    <span class="an">@Around</span>(<span class="st">"execution(* com.miapp.service.*.*(..))"</span>)
+    <span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">Object</span> loguearLlamada(<span class="tp">ProceedingJoinPoint</span> pjp) <span class="kw tok" data-tip="throws: declara que el método puede lanzar esta excepción — quien lo llama debe manejarla o volver a declararla.">throws</span> <span class="tp">Throwable</span> {
+        <span class="kw tok" data-tip="long: tipo numérico entero de 64 bits, para valores que no entran en un int (por ejemplo, timestamps).">long</span> inicio = <span class="tp">System</span>.currentTimeMillis();
+        <span class="tp">Object</span> resultado = pjp.proceed(); <span class="cm">// ejecuta el método real</span>
+        log.info(<span class="st">"{} tardó {}ms"</span>, pjp.getSignature(), <span class="tp">System</span>.currentTimeMillis() - inicio);
+        <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> resultado;
+    }
+}</code></pre>
+        <p>Este aspecto se aplica solo a cada método de cada <code>@Service</code>, sin tocar una línea de esas clases.</p>
+
+        <div class="callout green">
+          <b>La pieza que faltaba: cómo funciona esto por dentro</b>
+          <code>@Transactional</code> y <code>@Async</code> no son magia — son aspectos que Spring ya te da armados. Cuando tu bean necesita alguno de estos, Spring genera un <b>proxy</b>: una clase intermedia que envuelve a tu bean real. Si tu clase implementa una interfaz, usa un <i>JDK dynamic proxy</i>; si no, usa <i>CGLIB</i> (genera una subclase tuya en tiempo de ejecución). Cuando alguien de afuera llama a un método, en realidad llama al proxy, que ejecuta el "advice" (el código del aspecto — abrir transacción, delegar a otro hilo) y <b>después</b> llama al método real. Por eso una llamada interna (<code>this.metodo()</code>) nunca pasa por el proxy: se salta todo ese mecanismo.
+        </div>
+
+        <h3>¿Cuándo escribir tu propio aspecto?</h3>
+        <p>Raramente. Para logging, seguridad o transacciones, las anotaciones que ya trae Spring alcanzan el 95% del tiempo. Un aspecto propio se justifica cuando tenés una regla transversal específica de tu negocio — por ejemplo, auditar automáticamente quién ejecutó cada operación sensible, sin repetir ese código en cada método.</p>
+      </div>
+    </section>
+
+    <!-- 15 FUNDAMENTOS DE JAVA -->
+    <section class="sheet" id="fundamentos-java">
+      <div class="titleblock"><b>Plano N° 015</b>La base que se oxida<br>Escala 1:1</div>
+      <div class="eyebrow">15 · Lo que la entrevista da por sentado</div>
+      <h2>Fundamentos de Java que se te oxidan con el tiempo</h2>
+      <p class="lede">Streams, equals/hashCode e inmutabilidad son la base de casi cualquier entrevista de Java desde la versión 8. Es exactamente el tipo de cosa que se te va olvidando cuando la IA te escribe el código y vos dejás de pensarlo línea por línea.</p>
+
+      <div class="content">
+        <h3>Streams: no es una colección, es un pipeline <span style="font-size:12px;color:var(--slate);font-weight:400;">(Java 8+ — funciona en cualquier versión que vayas a encontrar)</span></h3>
+        <p>Un <code>Stream</code> no guarda datos — describe una secuencia de operaciones que se aplican sobre una fuente (una lista, por ejemplo) una sola vez. Las operaciones <b>intermedias</b> (<code>filter</code>, <code>map</code>, <code>sorted</code>) son perezosas: no hacen nada hasta que aparece una operación <b>terminal</b> (<code>collect</code>, <code>forEach</code>, <code>reduce</code>, <code>count</code>) que dispara todo el pipeline de una vez.</p>
+        <pre><code><span class="tp">List</span>&lt;<span class="tp">String</span>&gt; clientesVip = pedidos.stream()
+    .filter(p <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> p.getMonto().compareTo(<span class="tp">BigDecimal</span>.valueOf(<span class="st">1000</span>)) &gt; <span class="st">0</span>)
+    .map(<span class="tp">Pedido</span><span class="tok" data-tip=":: (method reference): forma abreviada de una lambda que delega directamente a un método existente. Pedido::getCliente equivale a escribir p -> p.getCliente().">::</span>getCliente)
+    .distinct()
+    .collect(<span class="tp">Collectors</span>.toList());</code></pre>
+        <p>Lo mismo con un <code>for</code> tradicional exige más líneas y una variable acumuladora manual — el stream expresa directamente <i>qué</i> querés, no <i>cómo</i> iterar.</p>
+
+        <h3>El operador <code>::</code>: cómo leerlo y cuándo conviene</h3>
+        <p>En el ejemplo de arriba apareció <code>Pedido::getCliente</code>. Eso se lee <b>"el método <code>getCliente</code> de la clase <code>Pedido</code>"</b>, y es una <b>referencia a método</b> (<i>method reference</i>): una forma abreviada de escribir una lambda que no hace nada más que delegar a un método que ya existe.</p>
+        <div class="tablewrap"><table>
+          <tr><th>Lambda (la alternativa)</th><th>Method reference equivalente</th></tr>
+          <tr><td><code>p -&gt; p.getCliente()</code></td><td><code>Pedido::getCliente</code></td></tr>
+          <tr><td><code>s -&gt; Integer.parseInt(s)</code></td><td><code>Integer::parseInt</code></td></tr>
+          <tr><td><code>x -&gt; log.info(x)</code></td><td><code>log::info</code></td></tr>
+          <tr><td><code>() -&gt; new Pedido()</code></td><td><code>Pedido::new</code></td></tr>
+        </table></div>
+        <p>Son estrictamente equivalentes — el compilador genera básicamente el mismo código en los dos casos. <code>::</code> existe simplemente porque, cuando la lambda es <b>solo</b> una llamada directa a un método existente, escribir <code>p -&gt; p.getCliente()</code> es ruido visual que no agrega información: ya sabés que va a recibir un <code>Pedido</code> y llamar a ese método porque lo dice el contexto.</p>
+        <p>Las cuatro formas que existen: método estático (<code>Integer::parseInt</code>), método de instancia sobre un objeto ya creado (<code>log::info</code>), método de instancia sobre un tipo genérico — la que más aparece en streams — (<code>Pedido::getCliente</code>), y referencia a un constructor (<code>Pedido::new</code>).</p>
+
+        <div class="callout green">
+          <b>Cuándo usarlo y cuándo no</b>
+          Usalo cuando la lambda es una delegación directa, de una sola línea, sin transformar nada ni agregar condiciones (<code>.map(Pedido::getCliente)</code>). No lo fuerces cuando necesitás hacer algo más que esa llamada simple — sumar una condición, combinar dos valores, transformar un parámetro antes de pasarlo. En esos casos la lambda explícita (<code>p -&gt; p.getMonto().multiply(factor)</code>) es más clara, y tratar de convertirla a <code>::</code> a la fuerza generalmente hace el código más difícil de leer, no menos.
+        </div>
+
+        <h3>Interfaces funcionales: lo que hace posible pasar una lambda</h3>
+        <p>Una <b>interfaz funcional</b> tiene exactamente un método abstracto (puede tener otros con cuerpo, marcados <code>default</code> o <code>static</code>). Eso es lo que permite que una lambda se pueda pasar donde se espera esa interfaz. Las más comunes ya vienen en <code>java.util.function</code>: <code>Predicate&lt;T&gt;</code> (recibe algo, devuelve <code>boolean</code>), <code>Function&lt;T,R&gt;</code> (transforma T en R), <code>Consumer&lt;T&gt;</code> (recibe y no devuelve nada), <code>Supplier&lt;T&gt;</code> (no recibe nada, devuelve algo).</p>
+
+        <h3>Optional: decir "puede no haber resultado" sin usar null</h3>
+        <p><code>Optional&lt;T&gt;</code> (Java 8+) es una caja que puede contener un valor o estar vacía. Existe para que un método declare en su propia firma que puede no tener resultado — en vez de devolver <code>null</code> y rezar para que quien llama se acuerde de chequearlo. Lo vas a ver todos los días, porque Spring Data lo devuelve en cada búsqueda por id:</p>
+        <pre><code><span class="cm">// Spring Data ya te lo devuelve así:</span>
+<span class="tp">Optional</span>&lt;<span class="tp">Pedido</span>&gt; resultado = pedidoRepository.findById(id);
+
+<span class="cm">// El patrón de todos los días — o hay pedido, o explota con TU excepción:</span>
+<span class="tp">Pedido</span> pedido = pedidoRepository.findById(id)
+    .orElseThrow(() <span class="tok" data-tip="-> : separa los parámetros de la lambda (izquierda) del cuerpo que se ejecuta (derecha). Es la forma corta de escribir una función anónima.">-&gt;</span> <span class="kw tok" data-tip="new: crea una instancia (un objeto) de una clase en memoria y ejecuta su constructor.">new</span> <span class="tp">PedidoNoEncontradoException</span>(id));
+
+<span class="cm">// Y se encadena como un stream de 0 o 1 elemento:</span>
+<span class="tp">String</span> cliente = pedidoRepository.findById(id)
+    .map(<span class="tp">Pedido</span><span class="tok" data-tip=":: (method reference): forma abreviada de una lambda que delega directamente a un método existente. Pedido::getCliente equivale a escribir p -> p.getCliente().">::</span>getCliente)
+    .orElse(<span class="st">"desconocido"</span>);</code></pre>
+        <p>Fijate que se encadena igual que un stream — <code>map</code>, <code>filter</code> — pero sobre cero o un elemento. Esa es la forma idiomática de usarlo: transformar y decidir el final (<code>orElse</code>, <code>orElseThrow</code>) sin abrir la caja a mano.</p>
+        <div class="callout red">
+          <b>Los anti-patrones de Optional</b>
+          Llamar <code>.get()</code> directo: si está vacío explota con <code>NoSuchElementException</code> — el mismo problema que el null, mejor vestido. Escribir <code>if (opt.isPresent()) { opt.get() }</code>: es un chequeo de null disfrazado — usá <code>map</code>/<code>orElseThrow</code>, que para eso existen. Y usarlo en atributos o parámetros de métodos: <code>Optional</code> fue diseñado como <b>tipo de retorno</b>, nada más.
+        </div>
+
+        <h3>El contrato de equals() y hashCode()</h3>
+        <p>La regla: si <code>a.equals(b)</code> es <code>true</code>, entonces <code>a.hashCode()</code> tiene que ser igual a <code>b.hashCode()</code> (lo inverso no es obligatorio — dos objetos distintos pueden compartir hash). El error clásico es sobreescribir <code>equals</code> sin sobreescribir <code>hashCode</code>: el objeto "se pierde" dentro de un <code>HashMap</code> o <code>HashSet</code>, porque la colección usa el hash para ubicar el balde donde buscar, y si el hash no es consistente con equals, nunca lo va a encontrar aunque <code>equals</code> diga que son iguales.</p>
+        <pre><code><span class="an">@Override</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier paquete. boolean: el método devuelve verdadero o falso.">public boolean</span> equals(<span class="tp">Object</span> o) {
+    <span class="kw tok" data-tip="if: ejecuta el bloque siguiente solo si la condición entre paréntesis es verdadera.">if</span> (<span class="kw tok" data-tip="this: referencia al objeto actual — se usa para diferenciar un atributo de un parámetro con el mismo nombre.">this</span> == o) <span class="kw tok" data-tip="return true: termina el método devolviendo “verdadero” — se cumple la condición.">return true</span>;
+    <span class="kw tok" data-tip="if: ejecuta el bloque siguiente solo si la condición entre paréntesis es verdadera.">if</span> (!(o <span class="kw tok" data-tip="instanceof: verifica en tiempo de ejecución si un objeto es de un tipo determinado, antes de tratarlo como tal.">instanceof</span> <span class="tp">Pedido</span> p)) <span class="kw tok" data-tip="return false: termina el método devolviendo “falso” — no se cumple la condición.">return false</span>;
+    <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> <span class="tp">Objects</span>.equals(id, p.id);
+}
+
+<span class="an">@Override</span>
+<span class="kw tok" data-tip="public: accesible desde cualquier paquete. int: el método devuelve un número entero.">public int</span> hashCode() {
+    <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> <span class="tp">Objects</span>.hash(id); <span class="cm">// mismo campo que usa equals</span>
+}</code></pre>
+        <p>Si usás un <code>record</code> (Java 16+), este par se genera solo y consistente — una razón más para preferirlos en DTOs y clases de datos simples.</p>
+
+        <h3>Inmutabilidad: por qué es "gratis" para concurrencia</h3>
+        <p>Un objeto <b>inmutable</b> no puede cambiar de estado después de construido. La consecuencia directa conecta con las secciones 06 y 07: si ningún hilo puede modificarlo, no existe la posibilidad de una race condition sobre ese objeto — es automáticamente seguro entre hilos, sin <code>synchronized</code> ni locks. <code>String</code> es inmutable en Java; por eso su <code>hashCode</code> se calcula una sola vez y se cachea, lo que lo vuelve rápido como clave de un <code>Map</code>.</p>
+
+        <div class="callout">
+          <b>Regla práctica</b>
+          Preferí clases inmutables (campos <code>final</code>, sin setters) para cualquier objeto que se comparta entre hilos o que viaje como DTO. Reservá la mutabilidad para donde realmente la necesitás — el estado interno de una entidad que se persiste, por ejemplo.
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 PAGINACION Y VERSIONADO -->
+    <section class="sheet" id="paginacion">
+      <div class="titleblock"><b>Plano N° 016</b>APIs que aguantan en producción<br>Escala 1:1</div>
+      <div class="eyebrow">16 · Lo que se olvida hasta que la tabla crece</div>
+      <h2>Paginación, ordenamiento y versionado de APIs</h2>
+      <p class="lede">Un endpoint que devuelve "todos los pedidos" sin paginar funciona perfecto con 50 registros de prueba y se cae con 500.000 en producción.</p>
+
+      <div class="content">
+        <h3>Pageable: paginación sin escribir SQL de LIMIT/OFFSET a mano</h3>
+        <p>Spring Data lee <code>page</code>, <code>size</code> y <code>sort</code> directamente de los query params si tu método de repositorio o controller recibe un <code>Pageable</code>.</p>
+        <pre><code><span class="kw tok" data-tip="public: la interfaz es accesible desde cualquier paquete. interface: declara un contrato de métodos, sin implementación.">public interface</span> <span class="tp">PedidoRepository</span> <span class="kw tok" data-tip="extends: esta interfaz hereda los métodos de la interfaz indicada.">extends</span> <span class="tp">JpaRepository</span>&lt;<span class="tp">Pedido</span>, <span class="tp">Long</span>&gt; {
+    <span class="cm">// findAll(Pageable) ya viene heredado; tus métodos propios también pueden recibir uno:</span>
+    <span class="tp">Page</span>&lt;<span class="tp">Pedido</span>&gt; findByEstado(<span class="tp">String</span> estado, <span class="tp">Pageable</span> pageable);
+}
+
+<span class="cm">// GET /pedidos?page=0&size=20&sort=fecha,desc</span></code></pre>
+        <p>La respuesta trae la página de datos <b>y</b> metadata (total de elementos, total de páginas) — nunca devuelvas solo la lista pelada, porque el cliente necesita saber cuántas páginas más hay para armar la navegación.</p>
+
+        <h3>Buenas prácticas rápidas</h3>
+        <ul>
+          <li>Definí un tamaño de página <b>máximo</b> por defecto — si no, un cliente puede pedir <code>size=999999</code> y tirarte la base de un solo request.</li>
+          <li>Para ordenar por varios criterios, se repite el parámetro: <code>?sort=fecha,desc&amp;sort=cliente,asc</code>.</li>
+          <li>Los índices de la base de datos tienen que estar alineados con las columnas que más se usan para ordenar/filtrar — paginar una tabla grande sin índice en esa columna es lento sin importar cuán bien esté escrito el código.</li>
+        </ul>
+
+        <h3>Versionado de API: tu contrato hacia afuera va a cambiar</h3>
+        <p>Cuando modificás un endpoint de forma incompatible (sacás un campo, cambiás su tipo), los clientes que ya lo consumen no deberían romperse de un día para el otro. Tres formas comunes de versionar:</p>
+        <div class="tablewrap"><table>
+          <tr><th>Estrategia</th><th>Ejemplo</th><th>Criterio</th></tr>
+          <tr><td class="k">Por URL</td><td><code>/api/v1/pedidos</code></td><td>La más simple y explícita — la más usada en la práctica</td></tr>
+          <tr><td class="k">Por header</td><td><code>Accept: application/vnd.miapp.v2+json</code></td><td>Mantiene la URL limpia, pero es menos visible/debuggeable</td></tr>
+          <tr><td class="k">Por query param</td><td><code>/api/pedidos?version=2</code></td><td>Fácil de probar a mano, mezcla versionado con filtros de negocio</td></tr>
+        </table></div>
+
+        <div class="callout green">
+          <b>Criterio</b>
+          Si no tenés una razón específica para otra estrategia, versionar por URL es la opción más simple de razonar y de documentar. Lo que importa de verdad no es cuál elegís, sino tener <b>alguna</b> desde el principio — agregar versionado después de que ya tenés clientes en producción es mucho más doloroso.
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 MENSAJERIA -->
+    <section class="sheet" id="mensajeria">
+      <div class="titleblock"><b>Plano N° 017</b>Comunicación entre servicios<br>Escala 1:1</div>
+      <div class="eyebrow">17 · Cuando no querés esperar la respuesta</div>
+      <h2>Mensajería y arquitectura basada en eventos: Kafka vs RabbitMQ</h2>
+      <p class="lede">Hasta acá, cada vez que un servicio necesitaba algo de otro, lo llamaba por HTTP y esperaba la respuesta. Eso es comunicación <b>síncrona</b>. La mensajería resuelve los casos donde esperar esa respuesta no tiene sentido.</p>
+
+      <div class="content">
+        <h3>Síncrono vs asíncrono: la decisión de fondo</h3>
+        <p>Con REST síncrono, si el servicio de notificaciones está caído, tu request se cuelga o falla. Con mensajería <b>asíncrona</b>, tu servicio publica un mensaje ("se creó el pedido #123") y sigue de largo — no le importa si el consumidor está disponible en ese instante exacto. Esto desacopla los servicios en el tiempo y te deja escalar consumidores de forma independiente del que publica.</p>
+
+        <h3>RabbitMQ: colas, para tareas que necesitás procesar sí o sí</h3>
+        <p>Es un <i>message broker</i> tradicional basado en colas: un mensaje se entrega a un consumidor y desaparece de la cola. Trae confirmaciones (<i>acknowledgments</i>) y reintentos de fábrica. Es la opción natural para tareas puntuales que tienen que procesarse exactamente una vez: procesar un pago, enviar un email, generar una factura.</p>
+        <pre><code><span class="an">@RabbitListener</span>(queues = <span class="st">"notificaciones.email"</span>)
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> procesarNotificacion(<span class="tp">NotificacionEvent</span> evento) {
+    <span class="cm">// se ejecuta una vez que el mensaje llega a esta cola</span>
+    emailService.enviar(evento.destinatario(), evento.mensaje());
+}</code></pre>
+
+        <h3>Kafka: un log de eventos que varios pueden leer, cada uno a su ritmo</h3>
+        <p>Kafka no es una cola — es un log distribuido. Los eventos quedan guardados un tiempo configurable, y <b>varios consumidores distintos pueden leer el mismo evento</b> de forma independiente, sin que se "gaste". Es la opción cuando el mismo hecho le importa a varios sistemas: "se creó un pedido" lo puede consumir en paralelo el sistema de facturación, el de analytics y el de notificaciones, cada uno sin afectar a los demás.</p>
+        <pre><code><span class="an">@KafkaListener</span>(topics = <span class="st">"pedidos-creados"</span>, groupId = <span class="st">"facturacion"</span>)
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase. void: el método no devuelve ningún valor.">public void</span> escucharPedidoCreado(<span class="tp">PedidoEvent</span> evento) {
+    facturacionService.generarFactura(evento);
+}
+
+<span class="cm">// del lado que publica:</span>
+kafkaTemplate.send(<span class="st">"pedidos-creados"</span>, pedido.getId(), evento);</code></pre>
+
+        <div class="tablewrap"><table>
+          <tr><th></th><th>RabbitMQ</th><th>Kafka</th></tr>
+          <tr><td class="k">Modelo</td><td>Cola — el mensaje se consume y desaparece</td><td>Log — el evento queda y se puede releer</td></tr>
+          <tr><td class="k">Volumen</td><td>Moderado</td><td>Muy alto (streaming de eventos)</td></tr>
+          <tr><td class="k">Replay</td><td>No, una vez consumido se pierde</td><td>Sí — podés reprocesar el historial</td></tr>
+          <tr><td class="k">Caso típico</td><td>Enviar un email, procesar un pago puntual</td><td>Eventos de negocio que consumen varios sistemas distintos</td></tr>
+        </table></div>
+
+        <div class="callout green">
+          <b>Criterio</b>
+          RabbitMQ cuando necesitás que una tarea puntual se procese confiablemente, con confirmaciones. Kafka cuando el mismo evento le importa a más de un sistema y necesitás poder "rebobinar" el historial. No son excluyentes: muchos sistemas reales usan Kafka para eventos de negocio y RabbitMQ para colas de tareas puntuales, según el caso.
+        </div>
+      </div>
+    </section>
+
+    <!-- 18 RESILIENCIA -->
+    <section class="sheet" id="resiliencia">
+      <div class="titleblock"><b>Plano N° 018</b>Cuando el otro servicio se cae<br>Escala 1:1</div>
+      <div class="eyebrow">18 · Fallar bien, no fallar en cadena</div>
+      <h2>Resiliencia en microservicios: Circuit Breaker, Retry y Rate Limiter</h2>
+      <p class="lede">Si tu app depende de otro servicio por red, ese servicio se va a poner lento o se va a caer tarde o temprano. Resilience4j es la respuesta estándar del ecosistema Spring para que esa falla no te tumbe a vos también.</p>
+
+      <div class="content">
+        <h3>El problema: fallas en cadena</h3>
+        <p>Si el servicio de pagos se cuelga y vos seguís reintentando llamarlo sin límite mientras tus hilos se acumulan esperando una respuesta que no llega, terminás quedándote sin hilos disponibles vos también — la falla de un servicio se propaga al tuyo.</p>
+
+        <h3>Retry: para fallas transitorias</h3>
+        <p>Reintenta automáticamente una llamada que falló, pensado para errores puntuales de red (un timeout aislado). No sirve para errores de negocio — si la tarjeta fue rechazada, reintentar no cambia nada.</p>
+
+        <h3>Circuit Breaker: para fallas sistemáticas</h3>
+        <p>Es la térmica de tu casa, aplicada a servicios: cuando detecta una falla sistemática, corta antes de que se queme todo lo demás. Si un servicio falla demasiado seguido, el circuito se "abre": deja de intentar llamarlo por un rato y devuelve un fallback inmediato en vez de acumular timeouts. Pasado ese tiempo, prueba de nuevo con pocas llamadas ("half-open") para ver si el servicio se recuperó, antes de volver a confiar en él del todo.</p>
+        <pre><code><span class="an">@CircuitBreaker</span>(name = <span class="st">"pagos"</span>, fallbackMethod = <span class="st">"pagoFallback"</span>)
+<span class="an">@Retry</span>(name = <span class="st">"pagos"</span>)
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">Resultado</span> procesarPago(<span class="tp">Pago</span> pago) {
+    <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> paymentClient.procesar(pago); <span class="cm">// llamada remota real</span>
+}
+
+<span class="kw tok" data-tip="public: accesible desde cualquier otra clase, sin restricción de paquete.">public</span> <span class="tp">Resultado</span> pagoFallback(<span class="tp">Pago</span> pago, <span class="tp">Exception</span> ex) {
+    <span class="kw tok" data-tip="return: corta la ejecución del método y devuelve el valor indicado a quien lo llamó.">return</span> <span class="tp">Resultado</span>.pendienteDeReintento(); <span class="cm">// respuesta inmediata, sin colgar al usuario</span>
+}</code></pre>
+
+        <h3>Rate Limiter: para no saturar vos mismo al otro servicio</h3>
+        <p>Limita cuántas llamadas hacés a un servicio externo en una ventana de tiempo — útil cuando el servicio de destino tiene sus propios límites (una API de terceros que cobra por llamada o corta la conexión si te pasás).</p>
+
+        <div class="callout">
+          <b>Criterio de uso</b>
+          Usá Retry para errores transitorios de llamadas remotas (HTTP, base de datos, servicios externos) — nunca para envolver una operación pesada de CPU local, ahí el problema no es de red y reintentar no ayuda. Circuit Breaker para frenar una falla sistemática antes de que te arrastre a vos también. Podés combinar ambos en el mismo método, como en el ejemplo de arriba.
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 DOCKER -->
+    <section class="sheet" id="docker">
+      <div class="titleblock"><b>Plano N° 019</b>De tu máquina a producción<br>Escala 1:1</div>
+      <div class="eyebrow">19 · Empaquetar sin que la imagen pese un GB</div>
+      <h2>Empaquetado y despliegue: Docker y JARs en capas</h2>
+      <p class="lede">Tu app corre en tu máquina con <code>mvn spring-boot:run</code>, pero en producción corre adentro de un contenedor. Esto es lo mínimo para que ese contenedor no sea gigante ni lento de reconstruir.</p>
+
+      <div class="content">
+        <h3>El problema del "fat jar" monolítico</h3>
+        <p>Spring Boot empaqueta tu código, todas las dependencias y un Tomcat embebido en un solo archivo <code>.jar</code>. Sin cuidado, cada cambio de una sola línea de tu código obligaría a Docker a reconstruir la imagen completa desde cero, incluyendo dependencias que no cambiaron.</p>
+
+        <h3>Multi-stage build: separar "compilar" de "correr"</h3>
+        <p>Una etapa usa una imagen con el JDK completo para compilar el proyecto; la etapa final copia solo el resultado sobre una imagen liviana con el JRE. La imagen que termina en producción no lleva el compilador ni el código fuente — solo lo necesario para ejecutar.</p>
+        <pre><code><span class="cm"># etapa 1: build</span>
+<span class="kw tok" data-tip="FROM (Dockerfile): define la imagen base sobre la que se arma esta etapa del build.">FROM</span> eclipse-temurin:21-jdk <span class="kw tok" data-tip="AS (Dockerfile): le pone un nombre a esta etapa del build, para referenciarla después (por ejemplo, en COPY --from=).">AS</span> build
+<span class="kw tok" data-tip="COPY (Dockerfile): copia archivos desde tu máquina (o desde otra etapa del build) hacia la imagen.">COPY</span> . .
+<span class="kw tok" data-tip="RUN (Dockerfile): ejecuta un comando durante la construcción de la imagen.">RUN</span> ./mvnw clean package -DskipTests
+
+<span class="cm"># etapa 2: solo lo necesario para correr</span>
+<span class="kw tok" data-tip="FROM (Dockerfile): define la imagen base sobre la que se arma esta etapa del build.">FROM</span> eclipse-temurin:21-jre
+<span class="cm"># Maven genera "nombre-version.jar" — el comodín evita hardcodear ese nombre</span>
+<span class="kw tok" data-tip="COPY (Dockerfile): copia archivos desde tu máquina (o desde otra etapa del build) hacia la imagen.">COPY</span> --from=build target/*.jar app.jar
+<span class="cm"># no correr como root</span>
+<span class="kw tok" data-tip="USER (Dockerfile): define con qué usuario del sistema corre el contenedor — conviene evitar root.">USER</span> <span class="st">1000</span>
+<span class="kw tok" data-tip="ENTRYPOINT (Dockerfile): el comando que se ejecuta cuando arranca el contenedor.">ENTRYPOINT</span> [<span class="st">"java"</span>, <span class="st">"-XX:MaxRAMPercentage=75.0"</span>, <span class="st">"-jar"</span>, <span class="st">"app.jar"</span>]</code></pre>
+
+        <h3>JAR en capas: que Docker no reconstruya todo por una línea de código</h3>
+        <p>Spring Boot puede extraer el jar en capas separadas (dependencias, dependencias snapshot, el cargador de Spring Boot, tu código) con <code>java -Djarmode=layertools -jar app.jar extract</code>. Como las dependencias cambian poco y tu código cambia todo el tiempo, Docker cachea la capa pesada de dependencias y solo reconstruye la capa liviana de tu código en cada build.</p>
+
+        <div class="callout red">
+          <b>El error clásico de memoria en contenedores</b>
+          Por defecto, una JVM vieja podía asumir que tenía toda la memoria del host disponible, no la memoria límite del contenedor — resultando en un <code>OutOfMemoryError</code> incluso con recursos de sobra en el servidor. La flag <code>-XX:MaxRAMPercentage=75.0</code> le dice a la JVM que respete el límite real que Docker le asignó al contenedor.
+        </div>
+      </div>
+    </section>
+
+    <!-- 20 VERSIONES -->
+    <section class="sheet" id="versiones">
+      <div class="titleblock"><b>Plano N° 020</b>Ubicarte en el tiempo<br>Escala 1:1</div>
+      <div class="eyebrow">20 · Antes de aplicar nada de esto</div>
+      <h2>Qué versión de Java y Spring Boot te vas a encontrar en un trabajo real</h2>
+      <p class="lede">Esta guía habla de Virtual Threads (Java 21) y de records (Java 16) como si fueran lo normal. En un trabajo real, hay una chance real de que tu proyecto todavía corra Java 8. Esta sección es para ubicarte rápido: qué versión tenés adelante, y qué de todo lo anterior te aplica directo.</p>
+
+      <div class="content">
+        <h3>Java lanza cada 6 meses, las empresas se quedan en las LTS</h3>
+        <p>Desde 2018, sale una versión nueva de Java cada seis meses — pero casi ninguna empresa las sigue todas. Se quedan en las versiones <b>LTS</b> (soporte de largo plazo): <b>8</b> (2014), <b>11</b> (2018), <b>17</b> (2021), <b>21</b> (2023) y <b>25</b> (2025, la más nueva al día de hoy). Desde la 17, sale una LTS nueva cada dos años — la próxima es la 29, recién en 2027.</p>
+
+        <div class="callout red">
+          <b>El dato que cambia las cosas: Java 8 se muere pronto</b>
+          El soporte público de OpenJDK 8 termina en <b>noviembre de 2026</b>. Y sin embargo, según relevamientos de Azul, todavía en 2025 alrededor del <b>23% de las instalaciones</b> corrían Java 8 (bajando del 40% en 2023), y más de la mitad de los usuarios de Java EE seguían en la versión 8 de esa especificación. Si tu empresa tiene un sistema viejo "que nadie quiere tocar", hay bastante chance de que sea exactamente por esto.
+        </div>
+
+        <h3>Spring Boot: tres familias, no una sola "versión actual"</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Familia</th><th>Java mínimo</th><th>Namespace</th><th>Estado hoy</th></tr>
+          <tr><td class="k">Spring Boot 2.x</td><td>Java 8 / 11</td><td><code>javax.*</code></td><td>Sin soporte oficial — muy común igual en sistemas viejos</td></tr>
+          <tr><td class="k">Spring Boot 3.x</td><td>Java 17+</td><td><code>jakarta.*</code></td><td>El más usado hoy en proyectos activos</td></tr>
+          <tr><td class="k">Spring Boot 4.x</td><td>Java 17 a 25/26</td><td><code>jakarta.*</code></td><td>El más nuevo (sobre Spring Framework 7) — proyectos que arrancan de cero</td></tr>
+        </table></div>
+
+        <h3>javax → jakarta: el cambio que más rompe migraciones</h3>
+        <p>Cuando Oracle cedió Java EE a la Eclipse Foundation, se quedó con los derechos del nombre <code>javax</code>. La fundación tuvo que renombrar todo a <code>jakarta</code> para poder seguir desarrollándolo. El resultado: cada import de una especificación empresarial cambió de paquete, a partir de Spring Boot 3.</p>
+        <div class="tablewrap"><table>
+          <tr><th>Spring Boot 2.x (javax)</th><th>Spring Boot 3.x / 4.x (jakarta)</th></tr>
+          <tr><td><code>javax.persistence.Entity</code></td><td><code>jakarta.persistence.Entity</code></td></tr>
+          <tr><td><code>javax.validation.constraints.NotNull</code></td><td><code>jakarta.validation.constraints.NotNull</code></td></tr>
+          <tr><td><code>javax.servlet.http.HttpServletRequest</code></td><td><code>jakarta.servlet.http.HttpServletRequest</code></td></tr>
+        </table></div>
+        <p>Esto no toca todo <code>javax</code> — paquetes que son parte del JDK en sí (<code>javax.sql</code>, <code>javax.crypto</code>) no cambiaron, solo los de especificaciones empresariales que pasaron a Jakarta EE.</p>
+
+        <h3>Cómo saber en qué familia estás parado, en 10 segundos</h3>
+        <ul>
+          <li>Mirá un import de <code>@Entity</code> o <code>@NotNull</code> en el código: si dice <code>javax.*</code>, estás en Spring Boot 2.x / Java 8-11. Si dice <code>jakarta.*</code>, estás en 3.x o 4.x.</li>
+          <li>En el <code>pom.xml</code>, la versión del <code>spring-boot-starter-parent</code> y la propiedad <code>&lt;java.version&gt;</code> te dicen exactamente dónde estás parado.</li>
+          <li><code>java -version</code> en la terminal te dice qué JDK tenés instalado localmente (no necesariamente el mismo que usa el servidor de producción).</li>
+        </ul>
+
+        <h3>Qué de esta guía te aplica según tu versión</h3>
+        <div class="tablewrap"><table>
+          <tr><th>Tema de la guía</th><th>Versión mínima</th><th>¿Aplica en Java 8?</th></tr>
+          <tr><td class="k">Streams, lambdas, method references (::)</td><td>Java 8</td><td><span class="stamp high">Sí, siempre</span></td></tr>
+          <tr><td class="k">var (inferencia de tipo local)</td><td>Java 10</td><td><span class="stamp low">No</span></td></tr>
+          <tr><td class="k">Records</td><td>Java 16</td><td><span class="stamp low">No</span></td></tr>
+          <tr><td class="k">Sealed classes, pattern matching</td><td>Java 17 / 21</td><td><span class="stamp low">No</span></td></tr>
+          <tr><td class="k">Virtual Threads</td><td>Java 21 + Spring Boot 3.2</td><td><span class="stamp low">No</span></td></tr>
+          <tr><td class="k">Lombok, inyección por constructor, AOP</td><td>Cualquiera</td><td><span class="stamp high">Sí — no dependen de la versión del lenguaje</span></td></tr>
+        </table></div>
+
+        <div class="callout green">
+          <b>El criterio que importa</b>
+          No te obsesiones con perseguir la última versión — la mayoría de los trabajos reales corren dos o cuatro años atrás de la última LTS, y eso es normal. Lo que sí importa es identificar rápido en qué familia estás parado (mirando imports y el <code>pom.xml</code>) para saber qué de todo lo que leíste en esta guía aplica directo hoy, y qué es "todavía no, pero pronto" para tu proyecto.
+        </div>
+      </div>
+    </section>
+
+    <!-- 21 DIA A DIA -->
+    <section class="sheet" id="dia-a-dia">
+      <div class="titleblock"><b>Plano N° 021</b>Aplicación práctica<br>Escala 1:1</div>
+      <div class="eyebrow">21 · Todo esto, en tu trabajo real</div>
+      <h2>Cómo se ve esto en tu día a día</h2>
+      <p class="lede">La teoría de arriba no es abstracta: aparece en logs, en bugs y en decisiones de diseño que probablemente ya viste pasar sin identificar de dónde venían.</p>
+
+      <div class="content">
+        <h3>Cuando ves un error de "no bean found"</h3>
+        <p>Si Spring no encuentra una implementación para inyectar (o encuentra dos y no sabe cuál elegir), te va a tirar una excepción al arrancar la app, no en runtime. Ahora que entendés IoC/DI, ese error deja de ser un misterio: significa que el contenedor no pudo armar el árbol de dependencias.</p>
+
+        <h3>Un bug clásico de scope singleton</h3>
+        <p>Si un <code>@Service</code> (singleton por default) guarda datos de un usuario en un campo de la clase en vez de en una variable local o la base de datos, ese dato queda compartido entre <b>todos</b> los usuarios que usan la app al mismo tiempo, porque es la misma instancia para todos. Es un bug de concurrencia disfrazado de bug de diseño.</p>
+
+        <h3>Leer nombres de hilos en los logs</h3>
+        <p>Cuando ves en un log algo como <code>http-nio-8080-exec-7</code>, eso es literalmente el nombre del hilo del pool de Tomcat que atendió esa petición. Sirve muchísimo para rastrear qué pasó con una request específica cuando el sistema atiende muchas al mismo tiempo.</p>
+
+        <h3>Reconocer una race condition en un reporte de bug</h3>
+        <p>Si alguien te dice "a veces, cuando dos usuarios hacen esto al mismo tiempo, el número queda mal" — ese "a veces" y ese "al mismo tiempo" son la pista. No es un bug de lógica, es una condición de carrera. La solución no es "revisar el if", es sincronizar el acceso al dato compartido.</p>
+
+        <div class="callout">
+          <b>El hábito que te recomiendo</b>
+          Cada vez que uses o pidas código con <code>@Async</code>, <code>@Service</code> con estado, o cualquier acceso a un recurso compartido (contador, caché en memoria, archivo), preguntate: "¿qué pasa si dos usuarios hacen esto exactamente al mismo tiempo?". Esa pregunta sola te va a evitar la mayoría de los bugs de concurrencia.
+        </div>
+      </div>
+    </section>
+
+    <!-- 22 ENTREVISTA -->
+    <section class="sheet" id="entrevista">
+      <div class="titleblock"><b>Plano N° 022</b>Preparación<br>Escala 1:1</div>
+      <div class="eyebrow">22 · Lo que te van a preguntar</div>
+      <h2>Preguntas típicas de entrevista</h2>
+      <p class="lede">Tocá cada pregunta para ver la respuesta corta. No memorices palabra por palabra — si entendiste las secciones de arriba, estas respuestas ya te van a salir con tus propias palabras.</p>
+
+      <div class="content">
+        <div class="qgroup-label">Java general</div>
+
+        <div class="qa">
+          <button>¿Por qué elegirías Java para un proyecto grande?</button>
+          <div class="a"><div class="a-inner">Por el tipado fuerte (menos errores llegan a producción), una JVM madura y portable, un manejo de concurrencia sólido desde el propio lenguaje, y un ecosistema (Spring, herramientas, comunidad) pensado para sistemas de larga vida.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Diferencia entre JDK, JRE y JVM?</button>
+          <div class="a"><div class="a-inner">La JVM ejecuta el bytecode. El JRE es la JVM más las librerías necesarias para correr una app Java. El JDK es el JRE más las herramientas para desarrollar (compilador incluido). Para programar necesitás el JDK; para solo correr una app compilada, alcanza con el JRE.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es el Garbage Collector y por qué importa?</button>
+          <div class="a"><div class="a-inner">Es el mecanismo de la JVM que libera automáticamente la memoria de objetos que ya nadie referencia. Importa porque, aunque es automático, un mal uso de memoria (crear objetos de más) puede generar pausas de GC que afectan la performance.</div></div>
+        </div>
+
+        <div class="qgroup-label">Spring Boot</div>
+
+        <div class="qa">
+          <button>¿Diferencia entre Spring y Spring Boot?</button>
+          <div class="a"><div class="a-inner">Spring es el framework base con todos los módulos (DI, seguridad, acceso a datos, web). Spring Boot es una capa sobre Spring que auto-configura todo eso y trae un servidor embebido, para que no tengas que armar el proyecto a mano con XML.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es la inyección de dependencias y por qué se usa?</button>
+          <div class="a"><div class="a-inner">Es el mecanismo por el cual Spring crea y entrega las dependencias que necesita una clase, en vez de que la clase las construya ella misma con "new". Se usa porque desacopla el código, lo hace más fácil de testear y de mantener.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Diferencia entre @Component, @Service, @Repository y @Controller?</button>
+          <div class="a"><div class="a-inner">Técnicamente los cuatro registran un bean en el contenedor de Spring. La diferencia es semántica: @Service marca lógica de negocio, @Repository marca acceso a datos, @Controller/@RestController marca manejo de peticiones HTTP, y @Component es la marca genérica para cualquier otro caso.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es un bean y cuál es su scope por default?</button>
+          <div class="a"><div class="a-inner">Un bean es un objeto que Spring gestiona (lo crea, lo guarda y lo entrega cuando hace falta). El scope por default es singleton: una sola instancia compartida por toda la app. También existe prototype, que crea una instancia nueva cada vez que se pide.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué hace @SpringBootApplication?</button>
+          <div class="a"><div class="a-inner">Combina tres anotaciones: activa la auto-configuración, habilita el escaneo de componentes en el paquete actual y subpaquetes, y marca la clase como fuente de configuración. Es lo que va sobre la clase con el método main.</div></div>
+        </div>
+
+        <div class="qgroup-label">Concurrencia</div>
+
+        <div class="qa">
+          <button>¿Qué es un hilo y en qué se diferencia de un proceso?</button>
+          <div class="a"><div class="a-inner">Un proceso es un programa corriendo con su propia memoria. Un hilo es una línea de ejecución dentro de un proceso; varios hilos de un mismo proceso comparten la misma memoria, lo cual los hace livianos pero también propensos a interferir entre sí si no se coordinan.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es una race condition? Dame un ejemplo</button>
+          <div class="a"><div class="a-inner">Pasa cuando dos o más hilos acceden y modifican el mismo dato al mismo tiempo sin coordinación, y el resultado final depende del orden en que se ejecutaron, dando un resultado incorrecto o impredecible. Ejemplo clásico: un contador compartido incrementado desde varios hilos sin sincronización pierde actualizaciones.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué hace la palabra clave synchronized?</button>
+          <div class="a"><div class="a-inner">Asegura que solo un hilo a la vez pueda ejecutar ese bloque o método, bloqueando a los demás hasta que termine. Evita race conditions, a costa de posible pérdida de performance si se usa en exceso.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es un deadlock y cómo se evita?</button>
+          <div class="a"><div class="a-inner">Es cuando dos (o más) hilos quedan esperando indefinidamente un recurso que tiene bloqueado el otro. Una forma común de evitarlo es asegurarse de que todos los hilos tomen los locks siempre en el mismo orden.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es un thread pool y por qué se usa en vez de crear hilos sueltos?</button>
+          <div class="a"><div class="a-inner">Es un grupo fijo de hilos reutilizables a los que se les asignan tareas. Se usa porque crear un hilo nuevo cada vez tiene costo de memoria y de sistema operativo; con un pool se reutilizan los hilos existentes y se controla cuántos corren en simultáneo.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es @Async y cuándo lo usarías?</button>
+          <div class="a"><div class="a-inner">Es una anotación de Spring que hace que un método se ejecute en un hilo separado del que atendió la petición HTTP. Se usa para tareas que no necesitan bloquear la respuesta al usuario, como enviar un email o generar un reporte en segundo plano.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué son los Virtual Threads y en qué se diferencian de un hilo tradicional?</button>
+          <div class="a"><div class="a-inner">Son hilos livianísimos introducidos en Java 21 (Project Loom) que gestiona la JVM en vez del sistema operativo, por lo que se pueden crear cientos de miles sin costo prohibitivo. Se programa igual que con hilos tradicionales (código secuencial bloqueante), pero cuando un virtual thread espera I/O, la JVM libera el hilo real del sistema operativo para que otro lo use mientras tanto.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Cuándo usarías programación reactiva (WebFlux) en vez de virtual threads?</button>
+          <div class="a"><div class="a-inner">Cuando el caso de uso es de streaming de datos o necesita backpressure fino (controlar la velocidad de emisión de datos), o cuando ya se maneja un volumen enorme de conexiones persistentes tipo WebSockets. Para el CRUD empresarial típico, I/O-bound, virtual threads suele ser la opción más simple hoy.</div></div>
+        </div>
+
+        <div class="qgroup-label">Persistencia y transacciones</div>
+
+        <div class="qa">
+          <button>¿Qué es el problema N+1 y cómo se soluciona?</button>
+          <div class="a"><div class="a-inner">Pasa cuando, al traer una lista de N entidades y acceder a una relación de cada una, el ORM ejecuta una query para la lista y una query adicional por cada entidad para traer la relación (N+1 queries en total en vez de una sola). Se soluciona con un fetch join explícito, @EntityGraph, o trayendo directamente una proyección DTO con los datos necesarios.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué hace @Transactional y qué es la trampa de la auto-invocación?</button>
+          <div class="a"><div class="a-inner">@Transactional asegura que un conjunto de operaciones se ejecuten como una unidad: si algo falla, se revierte todo. La trampa es que si un método transaccional se llama desde otro método de la misma clase, Spring no lo intercepta (porque @Transactional funciona con un proxy y una llamada interna no pasa por ese proxy), y la transacción simplemente no se aplica.</div></div>
+        </div>
+
+        <div class="qgroup-label">Arquitectura y calidad</div>
+
+        <div class="qa">
+          <button>¿Cuándo elegirías microservicios en vez de un monolito?</button>
+          <div class="a"><div class="a-inner">Cuando hay un dolor concreto: un equipo grande que se pisa constantemente en el mismo código, una parte del sistema que necesita escalar mucho más que el resto, o necesidad real de desplegar partes de forma independiente. La recomendación general es empezar con un monolito bien modularizado y migrar solo cuando ese dolor aparece, no por moda.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Diferencia entre autenticación y autorización?</button>
+          <div class="a"><div class="a-inner">Autenticación responde quién sos (login, validar credenciales o un token). Autorización responde qué podés hacer una vez que se sabe quién sos (qué roles o permisos tenés). Son pasos distintos y secuenciales.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es CORS y por qué aparece ese error?</button>
+          <div class="a"><div class="a-inner">Es una protección del navegador (same-origin policy): una página de un origen no puede leer respuestas de otro origen salvo que el servidor lo permita explícitamente. El error aparece cuando el front (ej. localhost:3000) llama a una API en otro origen (ej. localhost:8080) que no declaró ese origen como permitido. Se resuelve siempre del lado del servidor, configurando los orígenes permitidos — tocar headers desde el front no sirve.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Por qué se deshabilita CSRF en una API REST stateless?</button>
+          <div class="a"><div class="a-inner">Porque CSRF explota las cookies de sesión que el navegador adjunta automáticamente en cada request. Si la API se autentica con un JWT en el header Authorization — que el navegador no agrega solo — ese vector de ataque no existe y la protección no aporta nada. Si en cambio la app usa sesiones con cookies, deshabilitarla sí sería un agujero de seguridad.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué testearías con un mock y qué con una prueba de integración?</button>
+          <div class="a"><div class="a-inner">Se mockea una dependencia lenta, externa o no determinística (una API de terceros, por ejemplo) para tests unitarios rápidos y aislados. Se usa una prueba de integración cuando lo que se quiere validar es justamente que las piezas conectan bien: que una query trae lo esperado o que el mapeo JSON funciona.</div></div>
+        </div>
+
+        <div class="qgroup-label">AOP y ciclo de vida de un bean</div>
+
+        <div class="qa">
+          <button>¿Qué es AOP y para qué se usa?</button>
+          <div class="a"><div class="a-inner">Programación orientada a aspectos: permite escribir código transversal (logging, transacciones, seguridad, medición de tiempos) una sola vez y aplicarlo a muchos métodos sin repetirlo ni ensuciar la lógica de negocio. @Transactional y @Async son ejemplos de aspectos que Spring ya trae armados.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Cómo implementa Spring un aspecto por dentro?</button>
+          <div class="a"><div class="a-inner">Generando un proxy que envuelve al bean real: JDK dynamic proxy si la clase implementa una interfaz, o CGLIB (una subclase generada en runtime) si no. Las llamadas externas pasan por ese proxy, que ejecuta el código del aspecto antes/después/alrededor de la llamada real — por eso una llamada interna (this.metodo()) nunca dispara el aspecto.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿En qué orden se ejecutan @PostConstruct y la creación del proxy AOP?</button>
+          <div class="a"><div class="a-inner">Primero se inyectan las dependencias y se ejecuta @PostConstruct, y recién después los BeanPostProcessors envuelven el bean en un proxy (si corresponde). Esto implica que una auto-invocación dentro de @PostConstruct tampoco pasa por el proxy.</div></div>
+        </div>
+
+        <div class="qgroup-label">Java: streams, Optional, equals/hashCode</div>
+
+        <div class="qa">
+          <button>¿Diferencia entre una operación intermedia y una terminal en un Stream?</button>
+          <div class="a"><div class="a-inner">Las intermedias (filter, map, sorted) son perezosas: no ejecutan nada por sí solas, solo describen el pipeline. Recién cuando aparece una operación terminal (collect, forEach, reduce, count) se dispara la ejecución completa.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es un method reference (::) y en qué se diferencia de una lambda?</button>
+          <div class="a"><div class="a-inner">Es una forma abreviada de escribir una lambda que solo delega a un método ya existente, sin agregar lógica propia — Pedido::getCliente es exactamente equivalente a p -> p.getCliente(). Conviene usarlo cuando la lambda es una delegación directa de una línea; si hace algo más que esa llamada simple, la lambda explícita es más clara.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Para qué sirve Optional y cuál es el anti-patrón clásico?</button>
+          <div class="a"><div class="a-inner">Declara en la firma del método que puede no haber resultado, en vez de devolver null y depender de que quien llama lo chequee. Se usa idiomáticamente encadenando map/filter y cerrando con orElse u orElseThrow. El anti-patrón clásico es llamar .get() directo (explota igual que un null) o hacer isPresent() + get(), que es un chequeo de null disfrazado; también usarlo en campos o parámetros, cuando fue diseñado solo como tipo de retorno.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué pasa si sobreescribís equals() pero no hashCode()?</button>
+          <div class="a"><div class="a-inner">Se rompe el contrato entre ambos métodos: dos objetos que equals() considera iguales podrían tener hashCode() distinto, y estructuras como HashMap o HashSet (que usan el hash para ubicar el balde donde buscar) no van a poder encontrar ese objeto aunque equals diga que es igual a otro ya guardado.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Por qué un objeto inmutable es thread-safe automáticamente?</button>
+          <div class="a"><div class="a-inner">Porque su estado no puede cambiar después de construido. Si ningún hilo puede modificarlo, no existe la posibilidad de que dos hilos lean/escriban el mismo dato en un estado inconsistente — la race condition requiere que algo mute, y ahí no hay nada que mutar.</div></div>
+        </div>
+
+        <div class="qgroup-label">Mensajería y resiliencia</div>
+
+        <div class="qa">
+          <button>¿Cuándo usarías Kafka en vez de RabbitMQ?</button>
+          <div class="a"><div class="a-inner">Cuando el mismo evento le importa a varios sistemas distintos que necesitan consumirlo de forma independiente (Kafka permite eso porque es un log que no "gasta" el mensaje al leerlo), o cuando el volumen de eventos es muy alto y se necesita poder reprocesar el historial. RabbitMQ es más simple para una tarea puntual que debe procesarse una vez, con confirmaciones y reintentos.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Diferencia entre Retry y Circuit Breaker?</button>
+          <div class="a"><div class="a-inner">Retry reintenta una llamada que falló, pensado para errores transitorios de red. Circuit Breaker detecta que un servicio falla sistemáticamente y deja de llamarlo por un tiempo, devolviendo un fallback inmediato en vez de acumular timeouts — protege al propio sistema de una falla en cadena.</div></div>
+        </div>
+
+        <div class="qgroup-label">Despliegue</div>
+
+        <div class="qa">
+          <button>¿Para qué sirve un multi-stage build en el Dockerfile de una app Spring Boot?</button>
+          <div class="a"><div class="a-inner">Para separar la etapa de compilación (que necesita el JDK completo y el código fuente) de la etapa final que solo corre la app (con el JRE liviano). La imagen que termina en producción no incluye el compilador ni el código fuente, lo que la hace más chica y más segura.</div></div>
+        </div>
+
+        <div class="qgroup-label">Versiones</div>
+
+        <div class="qa">
+          <button>¿Cuál es la diferencia principal entre Spring Boot 2.x y 3.x?</button>
+          <div class="a"><div class="a-inner">Spring Boot 3 requiere Java 17 como mínimo y migró todos los imports de especificaciones empresariales de javax.* a jakarta.* (por ejemplo, javax.persistence.Entity pasó a jakarta.persistence.Entity), porque Oracle se quedó con los derechos del nombre javax cuando Java EE pasó a la Eclipse Foundation como Jakarta EE. Spring Boot 2.x no tiene soporte oficial hoy pero sigue siendo muy común en sistemas que corren Java 8 u 11.</div></div>
+        </div>
+        <div class="qa">
+          <button>¿Qué es una versión LTS de Java y por qué importa?</button>
+          <div class="a"><div class="a-inner">LTS (Long-Term Support) es una versión de Java que recibe soporte extendido, y sale cada dos años (8, 11, 17, 21, 25...), a diferencia de las versiones intermedias que salen cada seis meses y quedan sin soporte rápido. Las empresas casi siempre fijan su proyecto a una LTS, por eso "la última versión de Java" y "la versión que vas a encontrar en un trabajo" suelen ser cosas distintas.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23 PROMPT -->
+    <section class="sheet" id="prompt">
+      <div class="titleblock"><b>Plano N° 023</b>Práctica guiada<br>Escala 1:1</div>
+      <div class="eyebrow">23 · Para pegar en Claude Code</div>
+      <h2>El prompt para armar tu proyecto de práctica</h2>
+      <p class="lede">Copiá esto y pegalo en Claude Code (VS Code). Le pide que genere un mini proyecto Spring Boot pensado específicamente para que veas en código real todo lo que leíste arriba: inyección de dependencias, capas, hilos y una race condition de ejemplo.</p>
+
+      <div class="promptbox">
+        <button class="copybtn" onclick="copiarPrompt(this)">Copiar</button>
+        <pre><code id="prompt-text">Quiero aprender Spring Boot de forma práctica. Creá un proyecto Spring Boot (Java 17, Maven) llamado "spring-boot-lab" con una arquitectura en capas (Controller - Service - Repository) que simule una pequeña API de gestión de pedidos de un restaurante. Necesito que incluya:
+
+1. Un modelo Pedido (id, cliente, plato, estado) guardado en memoria, sin base de datos real (usando un Map o una lista).
+
+2. Un PedidoRepository como @Repository, un PedidoService como @Service que use inyección de dependencias por constructor (no @Autowired en el campo), y un PedidoController como @RestController con endpoints GET, POST y PUT.
+
+3. Un ejemplo claro de inyección de dependencias: una interfaz NotificacionService con dos implementaciones (EmailNotificacionService y SmsNotificacionService), y mostrame cómo Spring decide cuál inyectar usando @Primary o @Qualifier.
+
+4. Un endpoint asincrónico usando @Async que simule el envío de una notificación con un Thread.sleep de 3 segundos, para que yo vea cómo el hilo que atendió la petición no se bloquea.
+
+5. Un ejemplo simple de race condition: un contador compartido (por ejemplo "pedidos procesados hoy") que se incrementa sin sincronización desde múltiples hilos, seguido de la versión corregida usando synchronized o AtomicInteger, para poder comparar ambas.
+
+6. Comentarios en español en TODO el código explicando qué hace cada anotación (@Service, @Repository, @RestController, @Async, etc.) y por qué está ahí, como si le explicaras a alguien que nunca tocó Spring Boot pero sabe programación orientada a objetos.
+
+7. Un archivo README.md con instrucciones para correr el proyecto (mvn spring-boot:run) y una lista de qué endpoint probar primero para ver cada concepto en acción, con ejemplos de curl.
+
+No uses base de datos real ni Docker. Quiero algo que corra local con un solo comando y que pueda ir experimentando directamente en el código.</code></pre>
+      </div>
+
+      <div class="content">
+        <div class="callout green">
+          <b>Cómo sacarle el jugo</b>
+          No lo dejes corriendo y ya. Abrí cada archivo que genere, ubicalo en el diagrama de capas de la sección 05, y buscá en el código cada anotación que viste en esta guía. Cuando algo no te cierre, volvé a esta página o preguntame directamente — mejor entender un archivo chico a fondo que tener diez proyectos a medio entender.
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>Guía elaborada para acompañar tu trabajo diario con Spring Boot</span>
+      <span>Fin del plano — volvé cuando quieras</span>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Tooltips de código: pasar el mouse (o tocar en celular) sobre una palabra subrayada la explica
+  (function(){
+    const tip = document.createElement('div');
+    tip.className = 'code-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    let activeEl = null;
+
+    function showTip(el){
+      const text = el.getAttribute('data-tip');
+      if(!text) return;
+      activeEl = el;
+      tip.textContent = text;
+      tip.classList.add('visible');
+      const rect = el.getBoundingClientRect();
+      const tipRect = tip.getBoundingClientRect();
+      let left = rect.left + rect.width / 2 - tipRect.width / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+      let top = rect.top - tipRect.height - 10;
+      if(top < 8){ top = rect.bottom + 10; }
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+    function hideTip(){
+      tip.classList.remove('visible');
+      activeEl = null;
+    }
+
+    document.querySelectorAll('.tok').forEach(el => {
+      el.setAttribute('tabindex', '0');
+      el.addEventListener('mouseenter', () => showTip(el));
+      el.addEventListener('mouseleave', hideTip);
+      el.addEventListener('focus', () => showTip(el));
+      el.addEventListener('blur', hideTip);
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(activeEl === el){ hideTip(); } else { showTip(el); }
+      });
+    });
+    document.addEventListener('scroll', hideTip, true);
+    document.addEventListener('click', hideTip);
+  })();
+
+  // Theme toggle (claro/oscuro), persistido en localStorage
+  (function(){
+    const root = document.documentElement;
+    const stored = localStorage.getItem('guia-tema');
+    if(stored === 'light' || stored === 'dark'){
+      root.setAttribute('data-theme', stored);
+    }
+    function currentIsDark(){
+      const attr = root.getAttribute('data-theme');
+      if(attr === 'dark') return true;
+      if(attr === 'light') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    function syncIcons(){
+      const icon = currentIsDark() ? '☀' : '☾';
+      const a = document.getElementById('themeIcon');
+      const b = document.getElementById('themeIconMobile');
+      if(a) a.textContent = icon;
+      if(b) b.textContent = icon;
+    }
+    function toggleTheme(){
+      const next = currentIsDark() ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('guia-tema', next);
+      syncIcons();
+    }
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('themeToggleMobile').addEventListener('click', toggleTheme);
+    syncIcons();
+  })();
+
+  // Accordion
+  document.querySelectorAll('.qa button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.qa').classList.toggle('open');
+    });
+  });
+
+  // Copy prompt
+  function copiarPrompt(btn){
+    const text = document.getElementById('prompt-text').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'Copiado ✓';
+      btn.classList.add('done');
+      setTimeout(() => { btn.textContent = original; btn.classList.remove('done'); }, 1800);
+    });
+  }
+
+  // Active nav highlighting
+  const sections = document.querySelectorAll('.sheet');
+  const navLinks = document.querySelectorAll('.nav a');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const id = entry.target.getAttribute('id');
+        navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + id));
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
